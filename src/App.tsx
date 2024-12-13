@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import BottomNav from "./components/BottomNav";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
+import Home from "./pages/Home";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/home" element={<Home />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
