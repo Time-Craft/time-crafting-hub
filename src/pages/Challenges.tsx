@@ -1,4 +1,4 @@
-import { Trophy, Target, HandsClapping } from "lucide-react";
+import { Trophy, Target, Award } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ const Challenges = () => {
       title: "Community Helper",
       description: "Complete 5 services this week",
       progress: 60,
-      icon: HandsClapping,
+      icon: Award,
       reward: "3 bonus hours",
     },
     {

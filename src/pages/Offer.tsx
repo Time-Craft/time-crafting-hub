@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { HandShake, Clock, Calendar, MapPin } from "lucide-react";
+import { Handshake, Clock, Calendar, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ const Offer = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <HandShake className="text-primary" />
+              <Handshake className="text-primary" />
               Offer Your Time
             </CardTitle>
           </CardHeader>
@@ -66,7 +66,7 @@ const Offer = () => {
             </div>
 
             <Button className="w-full">
-              <HandShake className="mr-2" />
+              <Handshake className="mr-2" />
               Create Offer
             </Button>
           </CardContent>
