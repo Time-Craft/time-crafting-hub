@@ -8,7 +8,7 @@ const BottomNav = () => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-3 px-6">
       <div className="flex justify-between items-center max-w-lg mx-auto">
-        <Link to="/" className={`flex flex-col items-center ${isActive("/") ? "text-primary" : "text-gray-500"}`}>
+        <Link to="/home" className={`flex flex-col items-center ${isActive("/home") ? "text-primary" : "text-gray-500"}`}>
           <Home size={24} />
           <span className="text-xs mt-1">Home</span>
         </Link>
@@ -16,11 +16,11 @@ const BottomNav = () => {
           <MapPin size={24} />
           <span className="text-xs mt-1">Explore</span>
         </Link>
-        <Link to="/offer" className="flex flex-col items-center">
+        <Link to="/offer" className={`flex flex-col items-center ${isActive("/offer") ? "text-primary" : "text-gray-500"}`}>
           <div className="bg-primary rounded-full p-3 -mt-8">
             <Plus size={24} className="text-white" />
           </div>
-          <span className="text-xs mt-1 text-gray-500">Offer</span>
+          <span className="text-xs mt-1">Offer</span>
         </Link>
         <Link to="/challenges" className={`flex flex-col items-center ${isActive("/challenges") ? "text-primary" : "text-gray-500"}`}>
           <Trophy size={24} />
