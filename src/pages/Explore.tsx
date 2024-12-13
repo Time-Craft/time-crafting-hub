@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Tree, Book, Filter } from "lucide-react";
+import { MapPin, Trees, Book, Filter } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Toggle } from "@/components/ui/toggle";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,7 +10,7 @@ const Explore = () => {
   const [range, setRange] = useState<number>(5);
 
   const services = [
-    { id: 1, name: "Gardening", icon: Tree, distance: "2.1 km" },
+    { id: 1, name: "Gardening", icon: Trees, distance: "2.1 km" },
     { id: 2, name: "Tutoring", icon: Book, distance: "3.4 km" },
   ];
 
