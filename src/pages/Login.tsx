@@ -30,9 +30,7 @@ const Login = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      // Here you would typically handle the login logic
-      console.log(values);
-      // For demo purposes, extract username from email
+      // Extract username from email (before the @ symbol)
       const username = values.email.split('@')[0];
       localStorage.setItem('username', username);
       
@@ -108,15 +106,13 @@ const Login = () => {
               )}
             />
 
-            <div>
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary-dark"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing in..." : "Sign in"}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
+            </Button>
           </form>
         </Form>
 

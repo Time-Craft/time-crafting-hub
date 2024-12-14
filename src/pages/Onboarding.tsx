@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   services: z.string().min(10, "Please describe your services in at least 10 characters"),
@@ -15,7 +16,13 @@ const formSchema = z.object({
 const Onboarding = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const username = localStorage.getItem('username') || '';
+  const username = localStorage.getItem('username');
+
+  useEffect(() => {
+    if (!username) {
+      navigate('/login');
+    }
+  }, [username, navigate]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

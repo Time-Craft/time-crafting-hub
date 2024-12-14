@@ -37,13 +37,11 @@ const Signup = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      // Here you would typically handle the signup logic
-      console.log(values);
       localStorage.setItem('username', values.username);
       
       toast({
-        title: "Welcome to TimeCraft!",
-        description: "Your account has been created successfully.",
+        title: "Account created!",
+        description: "Welcome to TimeCraft",
       });
       navigate('/onboarding');
     } catch (error) {
@@ -153,15 +151,13 @@ const Signup = () => {
               )}
             />
 
-            <div>
-              <Button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary-dark"
-                disabled={isLoading}
-              >
-                {isLoading ? "Creating account..." : "Create account"}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary-dark"
+              disabled={isLoading}
+            >
+              {isLoading ? "Creating account..." : "Create account"}
+            </Button>
           </form>
         </Form>
 
