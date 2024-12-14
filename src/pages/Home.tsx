@@ -1,14 +1,28 @@
 import { Clock, Calendar, ArrowUpRight, ArrowDownRight, Trophy } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomNav from "@/components/BottomNav";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Home = () => {
+  const [username, setUsername] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUsername = localStorage.getItem('username');
+    if (!storedUsername) {
+      navigate('/login');
+      return;
+    }
+    setUsername(storedUsername);
+  }, [navigate]);
+
   return (
     <div className="min-h-screen bg-white pb-20">
       {/* Header Section */}
       <header className="bg-primary/5 p-6">
         <div className="max-w-lg mx-auto">
-          <h1 className="text-2xl font-semibold text-gray-900">Welcome back, Sarah</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Welcome back, {username}</h1>
           <p className="text-gray-600 mt-1">Current Status: Available</p>
         </div>
       </header>

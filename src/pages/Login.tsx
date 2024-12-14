@@ -41,7 +41,7 @@ const Login = () => {
       
       // Check if user has completed onboarding
       const hasServices = localStorage.getItem('userServices');
-      navigate(hasServices ? '/profile' : '/onboarding');
+      navigate(hasServices ? '/home' : '/onboarding');
     } catch (error) {
       toast({
         variant: "destructive",
