@@ -17,7 +17,7 @@ const Onboarding = () => {
         </div>
         
         <div className="space-y-4">
-          <Link to="/login">
+          <Link to="/signup">
             <Button className="w-full bg-primary hover:bg-primary-dark text-white">
               Get Started
             </Button>
