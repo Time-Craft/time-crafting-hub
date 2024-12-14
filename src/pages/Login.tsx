@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Apple, Mail, User, KeyRound } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Apple, Mail, KeyRound } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -17,6 +17,7 @@ const formSchema = z.object({
 const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -31,10 +32,18 @@ const Login = () => {
     try {
       // Here you would typically handle the login logic
       console.log(values);
+      // For demo purposes, extract username from email
+      const username = values.email.split('@')[0];
+      localStorage.setItem('username', username);
+      
       toast({
         title: "Welcome back!",
         description: "Successfully logged in to TimeCraft",
       });
+      
+      // Check if user has completed onboarding
+      const hasServices = localStorage.getItem('userServices');
+      navigate(hasServices ? '/profile' : '/onboarding');
     } catch (error) {
       toast({
         variant: "destructive",

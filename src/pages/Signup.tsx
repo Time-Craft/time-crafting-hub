@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Apple, Mail, User, KeyRound } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -22,6 +22,7 @@ const formSchema = z.object({
 const Signup = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,10 +39,13 @@ const Signup = () => {
     try {
       // Here you would typically handle the signup logic
       console.log(values);
+      localStorage.setItem('username', values.username);
+      
       toast({
         title: "Welcome to TimeCraft!",
         description: "Your account has been created successfully.",
       });
+      navigate('/onboarding');
     } catch (error) {
       toast({
         variant: "destructive",

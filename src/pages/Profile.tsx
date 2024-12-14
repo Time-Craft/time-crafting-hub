@@ -3,22 +3,41 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import BottomNav from "@/components/BottomNav";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Profile = () => {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [services, setServices] = useState('');
+
+  useEffect(() => {
+    const storedUsername = localStorage.getItem('username');
+    const storedServices = localStorage.getItem('userServices');
+    
+    if (!storedUsername) {
+      navigate('/login');
+      return;
+    }
+
+    setUsername(storedUsername);
+    setServices(storedServices || '');
+  }, [navigate]);
+
   return (
     <div className="min-h-screen pb-20">
       <div className="bg-white p-4 shadow-sm">
         <div className="flex items-center gap-4">
           <Avatar className="h-16 w-16">
             <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback>TC</AvatarFallback>
+            <AvatarFallback>{username.slice(0, 2).toUpperCase()}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold">John Doe</h1>
+              <h1 className="text-xl font-semibold">{username}</h1>
               <UserCheck className="text-primary" size={20} />
             </div>
-            <p className="text-sm text-gray-600">Available for: Gardening, Tutoring</p>
+            <p className="text-sm text-gray-600">{services}</p>
           </div>
           <button className="text-primary">
             <Edit size={20} />
