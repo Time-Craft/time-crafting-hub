@@ -18,6 +18,7 @@ interface Offer {
 
 const Offer = () => {
   const [serviceType, setServiceType] = useState("");
+  const [customService, setCustomService] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("");
   const [location, setLocation] = useState("");
@@ -35,8 +36,10 @@ const Offer = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    const finalServiceType = serviceType === "other" ? customService : serviceType;
+    
     // Check if any field is empty
-    if (!serviceType || !description || !duration || !location || !date) {
+    if (!finalServiceType || !description || !duration || !location || !date) {
       toast({
         title: "Error",
         description: "Please fill in all fields before creating an offer.",
@@ -46,7 +49,7 @@ const Offer = () => {
     }
 
     const newOffer = {
-      serviceType,
+      serviceType: finalServiceType,
       description,
       duration,
       location,
@@ -59,6 +62,7 @@ const Offer = () => {
 
     // Reset form
     setServiceType("");
+    setCustomService("");
     setDescription("");
     setDuration("");
     setLocation("");
@@ -99,8 +103,22 @@ const Offer = () => {
                     <SelectItem value="tech-support">Tech Support</SelectItem>
                     <SelectItem value="language-exchange">Language Exchange</SelectItem>
                     <SelectItem value="music-lessons">Music Lessons</SelectItem>
+                    <SelectItem value="fitness-training">Fitness Training</SelectItem>
+                    <SelectItem value="art-lessons">Art Lessons</SelectItem>
+                    <SelectItem value="child-care">Child Care</SelectItem>
+                    <SelectItem value="event-planning">Event Planning</SelectItem>
+                    <SelectItem value="other">Other (Specify)</SelectItem>
                   </SelectContent>
                 </Select>
+                {serviceType === "other" && (
+                  <Input
+                    placeholder="Enter your service type"
+                    value={customService}
+                    onChange={(e) => setCustomService(e.target.value)}
+                    required
+                    className="mt-2"
+                  />
+                )}
               </div>
 
               <div className="space-y-2">
