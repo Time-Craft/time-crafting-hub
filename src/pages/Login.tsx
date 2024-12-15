@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Apple, Mail, KeyRound } from "lucide-react";
+import { Mail, KeyRound } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -30,19 +30,22 @@ const Login = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-      // Extract username from email (before the @ symbol)
-      const username = values.email.split('@')[0];
-      localStorage.setItem('username', username);
+      // Simulate login success
+      const username = localStorage.getItem('username');
+      const userServices = localStorage.getItem('userServices');
       
       toast({
         title: "Welcome back!",
         description: "Successfully logged in to TimeCraft",
-        duration: 2000, // Reduced to 2 seconds
+        duration: 2000,
       });
       
-      // Check if user has completed onboarding
-      const hasServices = localStorage.getItem('userServices');
-      navigate(hasServices ? '/home' : '/onboarding');
+      // If user hasn't completed onboarding (no services set), redirect to onboarding
+      if (!userServices) {
+        navigate('/');
+      } else {
+        navigate('/home');
+      }
     } catch (error) {
       toast({
         variant: "destructive",
@@ -118,30 +121,10 @@ const Login = () => {
           </form>
         </Form>
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-200" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-white text-gray-500">Or continue with</span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Button variant="outline" className="w-full">
-            <Mail className="mr-2 h-4 w-4" />
-            Google
-          </Button>
-          <Button variant="outline" className="w-full">
-            <Apple className="mr-2 h-4 w-4" />
-            Apple
-          </Button>
-        </div>
-
         <p className="text-center text-sm text-gray-500">
           Don't have an account?{" "}
           <Link to="/signup" className="text-primary hover:text-primary-dark font-medium">
-            Sign up for TimeCraft
+            Create an account
           </Link>
         </p>
       </div>
