@@ -35,6 +35,16 @@ const Offer = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if any field is empty
+    if (!serviceType || !description || !duration || !location || !date) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields before creating an offer.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newOffer = {
       serviceType,
       description,
@@ -74,7 +84,7 @@ const Offer = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Service Type</label>
-                <Select value={serviceType} onValueChange={setServiceType}>
+                <Select value={serviceType} onValueChange={setServiceType} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a service" />
                   </SelectTrigger>
@@ -100,6 +110,7 @@ const Offer = () => {
                   className="resize-none"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  required
                 />
               </div>
 
@@ -115,6 +126,7 @@ const Offer = () => {
                     placeholder="2"
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -126,6 +138,7 @@ const Offer = () => {
                     placeholder="Your location"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
+                    required
                   />
                 </div>
               </div>
@@ -139,6 +152,7 @@ const Offer = () => {
                   type="date"
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
+                  required
                 />
               </div>
 
