@@ -37,6 +37,7 @@ const Login = () => {
       toast({
         title: "Welcome back!",
         description: "Successfully logged in to TimeCraft",
+        duration: 2000, // Reduced to 2 seconds
       });
       
       // Check if user has completed onboarding
@@ -47,6 +48,7 @@ const Login = () => {
         variant: "destructive",
         title: "Error",
         description: "Something went wrong. Please try again.",
+        duration: 2000,
       });
     } finally {
       setIsLoading(false);

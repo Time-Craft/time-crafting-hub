@@ -42,13 +42,15 @@ const Signup = () => {
       toast({
         title: "Account created!",
         description: "Welcome to TimeCraft",
+        duration: 2000, // Reduced to 2 seconds
       });
-      navigate('/onboarding');
+      navigate('/login');
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "Something went wrong. Please try again.",
+        duration: 2000,
       });
     } finally {
       setIsLoading(false);
