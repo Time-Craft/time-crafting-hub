@@ -3,18 +3,30 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomNav from "@/components/BottomNav";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Home = () => {
   const [username, setUsername] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem('username');
-    if (!storedUsername) {
-      navigate('/login');
-      return;
-    }
-    setUsername(storedUsername);
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/login');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single();
+
+      setUsername(profile?.username || session.user.email?.split('@')[0] || 'User');
+    };
+
+    checkAuth();
   }, [navigate]);
 
   return (
