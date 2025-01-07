@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Clock } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
@@ -11,6 +12,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters"),
   services: z.string().min(10, "Please describe your services in at least 10 characters"),
 });
 
@@ -23,6 +25,18 @@ const Onboarding = () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         navigate('/login');
+        return;
+      }
+
+      // Check if user has already completed onboarding
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile?.username) {
+        navigate('/home');
       }
     };
 
@@ -32,6 +46,7 @@ const Onboarding = () => {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      username: "",
       services: "",
     },
   });
@@ -43,12 +58,29 @@ const Onboarding = () => {
       return;
     }
 
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        username: values.username,
+      })
+      .eq('id', session.user.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+        duration: 2000,
+      });
+      return;
+    }
+
     // Store the services in localStorage for now
     localStorage.setItem('userServices', values.services);
     
     toast({
       title: "Welcome to TimeCraft!",
-      description: "Your services have been saved successfully.",
+      description: "Your profile has been set up successfully.",
       duration: 2000,
     });
     
@@ -64,12 +96,26 @@ const Onboarding = () => {
           </div>
           <h1 className="text-4xl font-bold text-gray-900">Welcome to TimeCraft!</h1>
           <p className="text-lg text-gray-600">
-            Tell us about the services you'd like to offer
+            Let's set up your profile
           </p>
         </div>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Choose a username</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your username" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="services"

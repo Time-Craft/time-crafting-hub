@@ -10,14 +10,27 @@ const Login = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', session?.user.id)
+          .single();
+
         toast({
           title: "Welcome back!",
           description: "Successfully logged in to TimeCraft",
           duration: 2000,
         });
-        navigate('/home');
+
+        // If no username is set, redirect to onboarding
+        if (!profile?.username) {
+          navigate('/onboarding');
+        } else {
+          navigate('/home');
+        }
       }
     });
 
