@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-import { UserCheck, Edit, Save, X, LogOut, Star, Eye } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ProfileImage } from "./ProfileImage";
+import { ProfileActions } from "./ProfileActions";
+import { ServicesList } from "./ServicesList";
 
 export const ProfileHeader = () => {
   const navigate = useNavigate();
@@ -17,7 +16,8 @@ export const ProfileHeader = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState("");
   const [editedServices, setEditedServices] = useState("");
-  const [showAllServices, setShowAllServices] = useState(false);
+  const [userId, setUserId] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     getProfile();
@@ -30,9 +30,11 @@ export const ProfileHeader = () => {
       return;
     }
 
+    setUserId(session.user.id);
+
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('username, services')
+      .select('username, services, avatar_url')
       .eq('id', session.user.id)
       .single();
 
@@ -46,6 +48,7 @@ export const ProfileHeader = () => {
       setEditedUsername(profile.username || '');
       setServices(profile.services || []);
       setEditedServices(profile.services?.join(', ') || '');
+      setAvatarUrl(profile.avatar_url);
     }
   };
 
@@ -97,83 +100,47 @@ export const ProfileHeader = () => {
     navigate('/login');
   };
 
-  const visibleServices = services.slice(0, 5);
-  const hasMoreServices = services.length > 5;
-
   return (
     <div className="bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16">
-          <AvatarImage src="/placeholder.svg" />
-          <AvatarFallback>{username?.slice(0, 2).toUpperCase()}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1">
-          {isEditing ? (
-            <div className="space-y-2">
-              <Input
-                value={editedUsername}
-                onChange={(e) => setEditedUsername(e.target.value)}
-                placeholder="Username"
-              />
-              <Input
-                value={editedServices}
-                onChange={(e) => setEditedServices(e.target.value)}
-                placeholder="Services (comma-separated)"
-              />
+      <div className="flex justify-between items-start mb-4">
+        <ProfileImage
+          username={username}
+          avatarUrl={avatarUrl}
+          userId={userId}
+          onImageUpdate={(url) => setAvatarUrl(url)}
+        />
+        <ProfileActions
+          isEditing={isEditing}
+          onEdit={() => setIsEditing(true)}
+          onSave={handleSave}
+          onCancel={() => setIsEditing(false)}
+          onLogout={handleLogout}
+        />
+      </div>
+
+      <div className="mt-4">
+        {isEditing ? (
+          <div className="space-y-2">
+            <Input
+              value={editedUsername}
+              onChange={(e) => setEditedUsername(e.target.value)}
+              placeholder="Username"
+            />
+            <Input
+              value={editedServices}
+              onChange={(e) => setEditedServices(e.target.value)}
+              placeholder="Services (comma-separated)"
+            />
+          </div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">{username}</h1>
+              <UserCheck className="text-primary" size={20} />
             </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-semibold">{username}</h1>
-                <UserCheck className="text-primary" size={20} />
-              </div>
-              <div className="flex flex-wrap gap-2 mt-2 items-center">
-                {visibleServices.map((service, index) => (
-                  <Badge key={index} variant="secondary">
-                    {service}
-                  </Badge>
-                ))}
-                {hasMoreServices && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => setShowAllServices(true)}
-                  >
-                    <Eye size={16} />
-                    Show All
-                  </Button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {isEditing ? (
-            <>
-              <button onClick={handleSave} className="text-green-500">
-                <Save size={20} />
-              </button>
-              <button onClick={() => setIsEditing(false)} className="text-red-500">
-                <X size={20} />
-              </button>
-            </>
-          ) : (
-            <>
-              <button onClick={() => setIsEditing(true)} className="text-primary">
-                <Edit size={20} />
-              </button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleLogout}
-                className="text-red-500"
-              >
-                <LogOut size={20} />
-              </Button>
-            </>
-          )}
-        </div>
+            <ServicesList services={services} />
+          </>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4">
@@ -189,23 +156,6 @@ export const ProfileHeader = () => {
           </div>
         </div>
       </div>
-
-      <Dialog open={showAllServices} onOpenChange={setShowAllServices}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>All Services</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto">
-            <div className="flex flex-wrap gap-2 p-4">
-              {services.map((service, index) => (
-                <Badge key={index} variant="secondary">
-                  {service}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
