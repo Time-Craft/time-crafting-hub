@@ -102,13 +102,28 @@ export const ProfileHeader = () => {
 
   return (
     <div className="bg-white p-4 shadow-sm">
-      <div className="flex justify-between items-start mb-4">
-        <ProfileImage
-          username={username}
-          avatarUrl={avatarUrl}
-          userId={userId}
-          onImageUpdate={(url) => setAvatarUrl(url)}
-        />
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <ProfileImage
+            username={username}
+            avatarUrl={avatarUrl}
+            userId={userId}
+            onImageUpdate={(url) => setAvatarUrl(url)}
+          />
+          {isEditing ? (
+            <Input
+              value={editedUsername}
+              onChange={(e) => setEditedUsername(e.target.value)}
+              placeholder="Username"
+              className="max-w-[200px]"
+            />
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">{username}</h1>
+              <UserCheck className="text-primary" size={20} />
+            </div>
+          )}
+        </div>
         <ProfileActions
           isEditing={isEditing}
           onEdit={() => setIsEditing(true)}
@@ -120,26 +135,13 @@ export const ProfileHeader = () => {
 
       <div className="mt-4">
         {isEditing ? (
-          <div className="space-y-2">
-            <Input
-              value={editedUsername}
-              onChange={(e) => setEditedUsername(e.target.value)}
-              placeholder="Username"
-            />
-            <Input
-              value={editedServices}
-              onChange={(e) => setEditedServices(e.target.value)}
-              placeholder="Services (comma-separated)"
-            />
-          </div>
+          <Input
+            value={editedServices}
+            onChange={(e) => setEditedServices(e.target.value)}
+            placeholder="Services (comma-separated)"
+          />
         ) : (
-          <>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-semibold">{username}</h1>
-              <UserCheck className="text-primary" size={20} />
-            </div>
-            <ServicesList services={services} />
-          </>
+          <ServicesList services={services} />
         )}
       </div>
 
