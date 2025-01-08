@@ -3,6 +3,7 @@ import { UserCheck, Edit, Save, X, LogOut, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +12,7 @@ export const ProfileHeader = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [username, setUsername] = useState("");
-  const [services, setServices] = useState("");
+  const [services, setServices] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState("");
   const [editedServices, setEditedServices] = useState("");
@@ -29,7 +30,7 @@ export const ProfileHeader = () => {
 
     const { data: profile, error } = await supabase
       .from('profiles')
-      .select('username')
+      .select('username, services')
       .eq('id', session.user.id)
       .single();
 
@@ -41,21 +42,26 @@ export const ProfileHeader = () => {
     if (profile) {
       setUsername(profile.username || '');
       setEditedUsername(profile.username || '');
+      setServices(profile.services || []);
+      setEditedServices(profile.services?.join(', ') || '');
     }
-
-    // Get services from localStorage for now
-    const storedServices = localStorage.getItem('userServices');
-    setServices(storedServices || '');
-    setEditedServices(storedServices || '');
   };
 
   const handleSave = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
+    const newServices = editedServices
+      .split(',')
+      .map(service => service.trim())
+      .filter(service => service.length > 0);
+
     const { error } = await supabase
       .from('profiles')
-      .update({ username: editedUsername })
+      .update({ 
+        username: editedUsername,
+        services: newServices
+      })
       .eq('id', session.user.id);
 
     if (error) {
@@ -67,9 +73,8 @@ export const ProfileHeader = () => {
       return;
     }
 
-    localStorage.setItem('userServices', editedServices);
     setUsername(editedUsername);
-    setServices(editedServices);
+    setServices(newServices);
     setIsEditing(false);
     toast({
       title: "Profile Updated",
@@ -108,7 +113,7 @@ export const ProfileHeader = () => {
               <Input
                 value={editedServices}
                 onChange={(e) => setEditedServices(e.target.value)}
-                placeholder="Services"
+                placeholder="Services (comma-separated)"
               />
             </div>
           ) : (
@@ -117,7 +122,13 @@ export const ProfileHeader = () => {
                 <h1 className="text-xl font-semibold">{username}</h1>
                 <UserCheck className="text-primary" size={20} />
               </div>
-              <p className="text-sm text-gray-600">{services}</p>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {services.map((service, index) => (
+                  <Badge key={index} variant="secondary">
+                    {service}
+                  </Badge>
+                ))}
+              </div>
             </>
           )}
         </div>

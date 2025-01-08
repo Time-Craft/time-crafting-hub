@@ -28,7 +28,6 @@ const Onboarding = () => {
         return;
       }
 
-      // Check if user has already completed onboarding
       const { data: profile } = await supabase
         .from('profiles')
         .select('username')
@@ -58,10 +57,16 @@ const Onboarding = () => {
       return;
     }
 
+    const services = values.services
+      .split(',')
+      .map(service => service.trim())
+      .filter(service => service.length > 0);
+
     const { error } = await supabase
       .from('profiles')
       .update({
         username: values.username,
+        services: services
       })
       .eq('id', session.user.id);
 
@@ -74,9 +79,6 @@ const Onboarding = () => {
       });
       return;
     }
-
-    // Store the services in localStorage for now
-    localStorage.setItem('userServices', values.services);
     
     toast({
       title: "Welcome to TimeCraft!",
@@ -124,7 +126,7 @@ const Onboarding = () => {
                   <FormLabel>What services can you provide?</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="E.g., I can offer gardening services, tutoring in mathematics..."
+                      placeholder="Enter services separated by commas (e.g., Gardening, Tutoring, Pet Sitting)"
                       className="min-h-[120px]"
                       {...field}
                     />
