@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UserCheck } from "lucide-react";
+import { UserCheck, Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
