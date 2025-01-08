@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UserCheck, Edit, Save, X, LogOut, Star } from "lucide-react";
+import { UserCheck, Edit, Save, X, LogOut, Star, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const ProfileHeader = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ export const ProfileHeader = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedUsername, setEditedUsername] = useState("");
   const [editedServices, setEditedServices] = useState("");
+  const [showAllServices, setShowAllServices] = useState(false);
 
   useEffect(() => {
     getProfile();
@@ -95,6 +97,9 @@ export const ProfileHeader = () => {
     navigate('/login');
   };
 
+  const visibleServices = services.slice(0, 5);
+  const hasMoreServices = services.length > 5;
+
   return (
     <div className="bg-white p-4 shadow-sm">
       <div className="flex items-center gap-4">
@@ -122,12 +127,23 @@ export const ProfileHeader = () => {
                 <h1 className="text-xl font-semibold">{username}</h1>
                 <UserCheck className="text-primary" size={20} />
               </div>
-              <div className="flex flex-wrap gap-2 mt-2">
-                {services.map((service, index) => (
+              <div className="flex flex-wrap gap-2 mt-2 items-center">
+                {visibleServices.map((service, index) => (
                   <Badge key={index} variant="secondary">
                     {service}
                   </Badge>
                 ))}
+                {hasMoreServices && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => setShowAllServices(true)}
+                  >
+                    <Eye size={16} />
+                    Show All
+                  </Button>
+                )}
               </div>
             </>
           )}
@@ -173,6 +189,23 @@ export const ProfileHeader = () => {
           </div>
         </div>
       </div>
+
+      <Dialog open={showAllServices} onOpenChange={setShowAllServices}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>All Services</DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <div className="flex flex-wrap gap-2 p-4">
+              {services.map((service, index) => (
+                <Badge key={index} variant="secondary">
+                  {service}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
