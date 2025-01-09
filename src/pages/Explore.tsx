@@ -15,7 +15,7 @@ import { useSession } from "@supabase/auth-helpers-react";
 
 interface Profile {
   id: string;
-  username: string;
+  username: string | null;
   services: string[];
   avatar_url: string | null;
 }
@@ -63,8 +63,15 @@ const Explore = () => {
       const { data, error } = await supabase
         .from('time_transactions')
         .select(`
-          *,
-          profiles!time_transactions_user_id_fkey (
+          id,
+          user_id,
+          type,
+          amount,
+          description,
+          service_type,
+          created_at,
+          recipient_id,
+          profiles:profiles!time_transactions_user_id_fkey (
             username,
             avatar_url
           )
