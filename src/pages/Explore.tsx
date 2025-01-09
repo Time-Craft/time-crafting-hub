@@ -10,7 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@supabase/auth-helpers-react";
 
 interface Profile {
@@ -25,11 +25,11 @@ interface TimeTransaction {
   user_id: string;
   type: 'earned' | 'spent';
   amount: number;
-  description: string;
+  description: string | null;
   service_type: string;
   created_at: string;
   recipient_id: string | null;
-  user: {
+  profiles: {
     username: string | null;
     avatar_url: string | null;
   };
@@ -64,7 +64,7 @@ const Explore = () => {
         .from('time_transactions')
         .select(`
           *,
-          user:profiles!time_transactions_user_id_fkey (
+          profiles!time_transactions_user_id_fkey (
             username,
             avatar_url
           )
@@ -232,7 +232,7 @@ const Explore = () => {
                 <Card key={offer.id} className="p-4">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={offer.user.avatar_url || ''} />
+                      <AvatarImage src={offer.profiles.avatar_url || ''} />
                       <AvatarFallback>
                         <User2 className="h-6 w-6" />
                       </AvatarFallback>
@@ -240,7 +240,7 @@ const Explore = () => {
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{offer.user.username || 'Anonymous'}</h3>
+                          <h3 className="font-medium">{offer.profiles.username || 'Anonymous'}</h3>
                           <p className="text-sm text-gray-500">{offer.service_type}</p>
                         </div>
                         <Badge>{offer.amount} hours</Badge>
