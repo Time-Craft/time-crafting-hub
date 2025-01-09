@@ -29,6 +29,10 @@ interface TimeTransaction {
   service_type: string;
   created_at: string;
   recipient_id: string | null;
+  user: {
+    username: string | null;
+    avatar_url: string | null;
+  };
 }
 
 const Explore = () => {
@@ -39,7 +43,7 @@ const Explore = () => {
   const { toast } = useToast();
   const session = useSession();
 
-  // Fetch all profiles and available offers
+  // Fetch all profiles
   const { data: profiles } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
@@ -52,20 +56,25 @@ const Explore = () => {
     }
   });
 
+  // Fetch available offers with user details
   const { data: offers, refetch: refetchOffers } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('time_transactions')
-        .select('*, profiles!time_transactions_user_id_fkey(username, avatar_url)')
+        .select(`
+          *,
+          user:profiles!time_transactions_user_id_fkey (
+            username,
+            avatar_url
+          )
+        `)
         .eq('type', 'earned')
         .is('recipient_id', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      return data as (TimeTransaction & {
-        profiles: { username: string; avatar_url: string | null }
-      })[];
+      return data as TimeTransaction[];
     }
   });
 
@@ -110,6 +119,15 @@ const Explore = () => {
       return;
     }
 
+    if (offer.user_id === session.user.id) {
+      toast({
+        title: "Error",
+        description: "You cannot accept your own offer",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const { error } = await supabase
       .from('time_transactions')
       .update({ recipient_id: session.user.id })
@@ -128,6 +146,8 @@ const Explore = () => {
       title: "Success",
       description: "Offer accepted successfully",
     });
+
+    refetchOffers();
   };
 
   return (
@@ -152,6 +172,7 @@ const Explore = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
             />
           </div>
           
@@ -211,7 +232,7 @@ const Explore = () => {
                 <Card key={offer.id} className="p-4">
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
-                      <AvatarImage src={offer.profiles.avatar_url || ''} />
+                      <AvatarImage src={offer.user.avatar_url || ''} />
                       <AvatarFallback>
                         <User2 className="h-6 w-6" />
                       </AvatarFallback>
@@ -219,7 +240,7 @@ const Explore = () => {
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="font-medium">{offer.profiles.username}</h3>
+                          <h3 className="font-medium">{offer.user.username || 'Anonymous'}</h3>
                           <p className="text-sm text-gray-500">{offer.service_type}</p>
                         </div>
                         <Badge>{offer.amount} hours</Badge>
