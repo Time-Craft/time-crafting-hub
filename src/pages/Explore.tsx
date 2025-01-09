@@ -39,15 +39,8 @@ const Explore = () => {
       const { data, error } = await supabase
         .from('time_transactions')
         .select(`
-          id,
-          user_id,
-          type,
-          amount,
-          description,
-          service_type,
-          created_at,
-          recipient_id,
-          profiles:profiles!time_transactions_user_id_fkey (
+          *,
+          profiles:user_id(
             username,
             avatar_url
           )
