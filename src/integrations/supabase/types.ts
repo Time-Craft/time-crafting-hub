@@ -65,6 +65,7 @@ export type Database = {
           id: string
           recipient_id: string | null
           service_type: string
+          status: string
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
@@ -75,6 +76,7 @@ export type Database = {
           id?: string
           recipient_id?: string | null
           service_type: string
+          status?: string
           type: Database["public"]["Enums"]["transaction_type"]
           user_id: string
         }
@@ -85,6 +87,7 @@ export type Database = {
           id?: string
           recipient_id?: string | null
           service_type?: string
+          status?: string
           type?: Database["public"]["Enums"]["transaction_type"]
           user_id?: string
         }

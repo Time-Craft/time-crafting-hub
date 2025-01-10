@@ -46,7 +46,6 @@ const Explore = () => {
           )
         `)
         .eq('type', 'earned')
-        .is('recipient_id', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -106,7 +105,10 @@ const Explore = () => {
 
     const { error } = await supabase
       .from('time_transactions')
-      .update({ recipient_id: session.user.id })
+      .update({ 
+        recipient_id: session.user.id,
+        status: 'in_progress'
+      })
       .eq('id', offer.id);
 
     if (error) {

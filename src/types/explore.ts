@@ -14,6 +14,7 @@ export interface TimeTransaction {
   service_type: string;
   created_at: string;
   recipient_id: string | null;
+  status: 'open' | 'in_progress' | 'accepted' | 'declined';
   profiles: {
     username: string | null;
     avatar_url: string | null;

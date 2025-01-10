@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import type { TimeTransaction } from "@/types/explore";
 
 interface OfferListProps {
@@ -13,6 +15,44 @@ interface OfferListProps {
 }
 
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
+  const { toast } = useToast();
+
+  const handleStatusUpdate = async (offer: TimeTransaction, newStatus: TimeTransaction['status']) => {
+    const { error } = await supabase
+      .from('time_transactions')
+      .update({ status: newStatus })
+      .eq('id', offer.id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update offer status",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: `Offer ${newStatus} successfully`,
+    });
+  };
+
+  const getStatusBadgeColor = (status: TimeTransaction['status']) => {
+    switch (status) {
+      case 'open':
+        return 'bg-green-100 text-green-800';
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'accepted':
+        return 'bg-blue-100 text-blue-800';
+      case 'declined':
+        return 'bg-red-100 text-red-800';
+      default:
+        return '';
+    }
+  };
+
   if (!offers?.length) {
     return (
       <div className="text-center py-4 text-gray-500">
@@ -39,16 +79,42 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                     <h3 className="font-medium">{offer.profiles.username || 'Anonymous'}</h3>
                     <p className="text-sm text-gray-500">{offer.service_type}</p>
                   </div>
-                  <Badge>{offer.amount} hours</Badge>
+                  <div className="flex gap-2 items-center">
+                    <Badge className={getStatusBadgeColor(offer.status)}>
+                      {offer.status}
+                    </Badge>
+                    <Badge>{offer.amount} hours</Badge>
+                  </div>
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{offer.description}</p>
-                {currentUserId !== offer.user_id && (
+                
+                {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"
-                    onClick={() => onAcceptOffer(offer)}
+                    onClick={() => {
+                      onAcceptOffer(offer);
+                      handleStatusUpdate(offer, 'in_progress');
+                    }}
                   >
                     Accept Offer
                   </Button>
+                )}
+
+                {currentUserId === offer.user_id && offer.status === 'in_progress' && (
+                  <div className="flex gap-2 mt-4">
+                    <Button 
+                      onClick={() => handleStatusUpdate(offer, 'accepted')}
+                      variant="default"
+                    >
+                      Confirm
+                    </Button>
+                    <Button 
+                      onClick={() => handleStatusUpdate(offer, 'open')}
+                      variant="destructive"
+                    >
+                      Decline
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
