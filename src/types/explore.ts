@@ -18,5 +18,5 @@ export interface TimeTransaction {
   profiles: {
     username: string | null;
     avatar_url: string | null;
-  };
+  } | null;
 }

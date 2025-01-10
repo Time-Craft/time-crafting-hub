@@ -40,7 +40,7 @@ const Explore = () => {
         .from('time_transactions')
         .select(`
           *,
-          profiles!time_transactions_user_id_fkey (
+          profiles (
             username,
             avatar_url
           )
