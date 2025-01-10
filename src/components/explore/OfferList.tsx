@@ -32,9 +32,16 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       return;
     }
 
+    const statusMessages = {
+      in_progress: "Offer accepted successfully. Waiting for confirmation.",
+      accepted: "Offer confirmed successfully",
+      open: "Offer declined",
+      declined: "Offer declined"
+    };
+
     toast({
       title: "Success",
-      description: `Offer ${newStatus} successfully`,
+      description: statusMessages[newStatus],
     });
   };
 
@@ -88,6 +95,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{offer.description}</p>
                 
+                {/* Show Accept button only if user is not the offer creator and offer is open */}
                 {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"
@@ -100,6 +108,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                   </Button>
                 )}
 
+                {/* Show Confirm/Decline buttons only to offer creator when status is in_progress */}
                 {currentUserId === offer.user_id && offer.status === 'in_progress' && (
                   <div className="flex gap-2 mt-4">
                     <Button 
@@ -109,12 +118,26 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                       Confirm
                     </Button>
                     <Button 
-                      onClick={() => handleStatusUpdate(offer, 'open')}
+                      onClick={() => handleStatusUpdate(offer, 'declined')}
                       variant="destructive"
                     >
                       Decline
                     </Button>
                   </div>
+                )}
+
+                {/* Show status message when offer is accepted */}
+                {offer.status === 'accepted' && (
+                  <p className="mt-4 text-sm text-green-600 font-medium">
+                    This offer has been accepted and confirmed
+                  </p>
+                )}
+
+                {/* Show status message when offer is declined */}
+                {offer.status === 'declined' && (
+                  <p className="mt-4 text-sm text-red-600 font-medium">
+                    This offer has been declined
+                  </p>
                 )}
               </div>
             </div>
