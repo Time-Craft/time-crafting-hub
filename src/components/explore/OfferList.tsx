@@ -68,7 +68,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
           <Card key={offer.id} className="p-4">
             <div className="flex items-start gap-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={offer.profiles.avatar_url || ''} />
+                <AvatarImage src={offer.profiles?.avatar_url || ''} />
                 <AvatarFallback>
                   <User2 className="h-6 w-6" />
                 </AvatarFallback>
@@ -76,7 +76,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
               <div className="flex-1">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium">{offer.profiles.username || 'Anonymous'}</h3>
+                    <h3 className="font-medium">{offer.profiles?.username || 'Anonymous'}</h3>
                     <p className="text-sm text-gray-500">{offer.service_type}</p>
                   </div>
                   <div className="flex gap-2 items-center">
