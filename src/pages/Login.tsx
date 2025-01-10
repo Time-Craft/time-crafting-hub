@@ -60,10 +60,10 @@ const Login = () => {
   const handleAuthError = (error: AuthError) => {
     let errorMessage = 'An error occurred during authentication.';
     
-    if (error.message.includes('user_already_exists')) {
-      errorMessage = 'This email is already registered. Please sign in instead.';
-    } else if (error.message.includes('invalid_credentials')) {
+    if (error.message.includes('invalid_credentials')) {
       errorMessage = 'Invalid email or password. Please check your credentials.';
+    } else if (error.message.includes('user_already_exists')) {
+      errorMessage = 'This email is already registered. Please sign in instead.';
     } else if (error.message.includes('email_not_confirmed')) {
       errorMessage = 'Please verify your email address before signing in.';
     }
