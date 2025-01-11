@@ -32,28 +32,31 @@ const Explore = () => {
     }
   });
 
-  // Fetch available offers with user details
+  // Fetch available offers with user details, excluding current user's offers
   const { data: offers, refetch: refetchOffers } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
+      if (!session?.user?.id) return [];
+      
       const { data, error } = await supabase
         .from('time_transactions')
         .select(`
           *,
-          profiles (
+          profiles:user_id (
             username,
             avatar_url
           )
         `)
         .eq('type', 'earned')
+        .neq('user_id', session.user.id) // Filter out current user's offers
         .order('created_at', { ascending: false });
       
       if (error) throw error;
       return data as TimeTransaction[];
-    }
+    },
+    enabled: !!session?.user?.id
   });
 
-  // Set up real-time subscription
   useEffect(() => {
     const channel = supabase
       .channel('public:time_transactions')

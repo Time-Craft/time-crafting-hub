@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeTransaction } from "@/types/explore";
+import { useState } from "react";
 
 interface OfferListProps {
   offers: TimeTransaction[] | null;
@@ -16,33 +17,11 @@ interface OfferListProps {
 
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
   const { toast } = useToast();
+  const [acceptedOffers, setAcceptedOffers] = useState<Set<string>>(new Set());
 
-  const handleStatusUpdate = async (offer: TimeTransaction, newStatus: TimeTransaction['status']) => {
-    const { error } = await supabase
-      .from('time_transactions')
-      .update({ status: newStatus })
-      .eq('id', offer.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update offer status",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const statusMessages = {
-      in_progress: "Offer accepted successfully. Waiting for confirmation.",
-      accepted: "Offer confirmed successfully",
-      open: "Offer declined",
-      declined: "Offer declined"
-    };
-
-    toast({
-      title: "Success",
-      description: statusMessages[newStatus],
-    });
+  const handleAcceptOffer = (offer: TimeTransaction) => {
+    onAcceptOffer(offer);
+    setAcceptedOffers(prev => new Set([...prev, offer.id]));
   };
 
   const getStatusBadgeColor = (status: TimeTransaction['status']) => {
@@ -99,41 +78,26 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                 {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"
-                    onClick={() => {
-                      onAcceptOffer(offer);
-                      handleStatusUpdate(offer, 'in_progress');
-                    }}
+                    onClick={() => handleAcceptOffer(offer)}
+                    disabled={acceptedOffers.has(offer.id)}
                   >
-                    Accept Offer
+                    {acceptedOffers.has(offer.id) ? 'Offer Accepted' : 'Accept Offer'}
                   </Button>
                 )}
 
-                {/* Show Confirm/Decline buttons only to offer creator when status is in_progress */}
-                {currentUserId === offer.user_id && offer.status === 'in_progress' && (
-                  <div className="flex gap-2 mt-4">
-                    <Button 
-                      onClick={() => handleStatusUpdate(offer, 'accepted')}
-                      variant="default"
-                    >
-                      Confirm
-                    </Button>
-                    <Button 
-                      onClick={() => handleStatusUpdate(offer, 'declined')}
-                      variant="destructive"
-                    >
-                      Decline
-                    </Button>
-                  </div>
+                {/* Show status messages */}
+                {offer.status === 'in_progress' && (
+                  <p className="mt-4 text-sm text-yellow-600 font-medium">
+                    Waiting for confirmation from the offer creator
+                  </p>
                 )}
 
-                {/* Show status message when offer is accepted */}
                 {offer.status === 'accepted' && (
                   <p className="mt-4 text-sm text-green-600 font-medium">
                     This offer has been accepted and confirmed
                   </p>
                 )}
 
-                {/* Show status message when offer is declined */}
                 {offer.status === 'declined' && (
                   <p className="mt-4 text-sm text-red-600 font-medium">
                     This offer has been declined
