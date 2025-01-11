@@ -66,7 +66,7 @@ export const OfferList = () => {
   return (
     <div className="space-y-4">
       {offers.map((offer) => (
-        <div key={offer.id} className="border rounded-lg p-4 space-y-2 relative">
+        <div key={offer.id} className="border rounded-lg p-4 space-y-2 relative bg-white">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold capitalize">{offer.service_type}</h3>
             <div className="flex items-center gap-4">
@@ -85,9 +85,19 @@ export const OfferList = () => {
             </div>
           </div>
           <p className="text-sm text-gray-600">{offer.description}</p>
-          <div className="flex gap-4 text-sm text-gray-500">
-            <span>{offer.amount} hours</span>
-            <span className="capitalize">{offer.status}</span>
+          <div className="flex gap-4 text-sm">
+            <span className="text-gray-500">{offer.amount} hours</span>
+            <span className={`capitalize ${
+              offer.status === 'open' 
+                ? 'text-green-600' 
+                : offer.status === 'in_progress' 
+                ? 'text-yellow-600'
+                : offer.status === 'accepted'
+                ? 'text-blue-600'
+                : 'text-red-600'
+            }`}>
+              {offer.status}
+            </span>
           </div>
         </div>
       ))}
