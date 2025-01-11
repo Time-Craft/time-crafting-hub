@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeTransaction } from "@/types/explore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface OfferListProps {
   offers: TimeTransaction[] | null;
@@ -19,9 +19,63 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
   const { toast } = useToast();
   const [acceptedOffers, setAcceptedOffers] = useState<Set<string>>(new Set());
 
-  const handleAcceptOffer = (offer: TimeTransaction) => {
-    onAcceptOffer(offer);
-    setAcceptedOffers(prev => new Set([...prev, offer.id]));
+  // Subscribe to real-time updates for offer statuses
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:time_transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_transactions'
+        },
+        (payload) => {
+          // Update local state when offer status changes
+          if (payload.new && 'status' in payload.new) {
+            const updatedOffer = payload.new as TimeTransaction;
+            if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined') {
+              setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const handleAcceptOffer = async (offer: TimeTransaction) => {
+    try {
+      // Update the offer status to 'in_progress' and set the recipient_id
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({
+          status: 'in_progress',
+          recipient_id: currentUserId
+        })
+        .eq('id', offer.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setAcceptedOffers(prev => new Set([...prev, offer.id]));
+      onAcceptOffer(offer);
+
+      toast({
+        title: "Offer Accepted",
+        description: "Waiting for the offer creator to confirm.",
+      });
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept offer. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusBadgeColor = (status: TimeTransaction['status']) => {
@@ -85,10 +139,12 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                   </Button>
                 )}
 
-                {/* Show status messages */}
+                {/* Status messages */}
                 {offer.status === 'in_progress' && (
                   <p className="mt-4 text-sm text-yellow-600 font-medium">
-                    Waiting for confirmation from the offer creator
+                    {currentUserId === offer.user_id 
+                      ? 'Someone has accepted your offer. Please confirm or decline.'
+                      : 'Waiting for confirmation from the offer creator'}
                   </p>
                 )}
 
