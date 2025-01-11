@@ -1,4 +1,4 @@
-import { User2 } from "lucide-react";
+import { User2, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -78,6 +78,30 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
     }
   };
 
+  const handleDeleteOffer = async (offerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .delete()
+        .eq('id', offerId)
+        .eq('user_id', currentUserId); // Ensure only the creator can delete
+
+      if (error) throw error;
+
+      toast({
+        title: "Offer Deleted",
+        description: "Your offer has been successfully deleted.",
+      });
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete offer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusBadgeColor = (status: TimeTransaction['status']) => {
     switch (status) {
       case 'open':
@@ -120,6 +144,16 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                     <p className="text-sm text-gray-500">{offer.service_type}</p>
                   </div>
                   <div className="flex gap-2 items-center">
+                    {currentUserId === offer.user_id && offer.status === 'open' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteOffer(offer.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Badge className={getStatusBadgeColor(offer.status)}>
                       {offer.status}
                     </Badge>
@@ -133,9 +167,9 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                   <Button 
                     className="mt-4"
                     onClick={() => handleAcceptOffer(offer)}
-                    disabled={acceptedOffers.has(offer.id)}
+                    disabled={offer.status !== 'open'}
                   >
-                    {acceptedOffers.has(offer.id) ? 'Offer Accepted' : 'Accept Offer'}
+                    Accept Offer
                   </Button>
                 )}
 
