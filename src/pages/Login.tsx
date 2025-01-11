@@ -13,49 +13,67 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Check if there's an existing session on component mount
+    const checkSession = async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        handleAuthError(sessionError);
+        return;
+      }
+      if (session) {
+        handleSuccessfulAuth(session);
+      }
+    };
+    checkSession();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
-        // Check if user has completed onboarding
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('id', session?.user.id)
-          .single();
-
-        toast({
-          title: "Welcome back!",
-          description: "Successfully logged in to TimeCraft",
-          duration: 2000,
-        });
-
-        // If no username is set, redirect to onboarding
-        if (!profile?.username) {
-          navigate('/onboarding');
-        } else {
-          navigate('/home');
+        if (session) {
+          handleSuccessfulAuth(session);
         }
       } else if (event === 'SIGNED_OUT') {
         setError(null);
-      } else if (event === 'USER_UPDATED' && session?.user) {
-        const { error: authError } = await supabase.auth.getSession();
-        if (authError) {
-          handleAuthError(authError);
+        // Clear any stored tokens
+        await supabase.auth.signOut();
+      } else if (event === 'TOKEN_REFRESHED') {
+        // Handle successful token refresh
+        if (session) {
+          handleSuccessfulAuth(session);
         }
-      }
-    });
-
-    // Listen for auth errors
-    const authListener = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'USER_UPDATED' && !session) {
-        setError(null);
       }
     });
 
     return () => {
       subscription.unsubscribe();
-      authListener.data.subscription.unsubscribe();
     };
   }, [navigate, toast]);
+
+  const handleSuccessfulAuth = async (session: any) => {
+    try {
+      // Check if user has completed onboarding
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('id', session.user.id)
+        .single();
+
+      toast({
+        title: "Welcome back!",
+        description: "Successfully logged in to TimeCraft",
+        duration: 2000,
+      });
+
+      // If no username is set, redirect to onboarding
+      if (!profile?.username) {
+        navigate('/onboarding');
+      } else {
+        navigate('/home');
+      }
+    } catch (error) {
+      console.error('Error checking profile:', error);
+      handleAuthError(error as AuthError);
+    }
+  };
 
   const handleAuthError = (error: AuthError) => {
     let errorMessage = 'An error occurred during authentication.';
@@ -66,6 +84,10 @@ const Login = () => {
       errorMessage = 'This email is already registered. Please sign in instead.';
     } else if (error.message.includes('email_not_confirmed')) {
       errorMessage = 'Please verify your email address before signing in.';
+    } else if (error.message.includes('refresh_token_not_found')) {
+      errorMessage = 'Your session has expired. Please sign in again.';
+      // Force a new sign in when refresh token is invalid
+      supabase.auth.signOut();
     }
     
     setError(errorMessage);
