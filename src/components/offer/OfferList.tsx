@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 interface Offer {
   id: string;
@@ -34,6 +35,29 @@ export const OfferList = () => {
     enabled: !!session?.user.id,
   });
 
+  // Subscribe to real-time changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:time_transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_transactions'
+        },
+        (payload) => {
+          // Refresh the offers list when changes occur
+          refetch();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
   const handleDelete = async (offerId: string) => {
     try {
       const { error } = await supabase
@@ -50,7 +74,7 @@ export const OfferList = () => {
         description: "Offer deleted successfully",
       });
 
-      refetch(); // Refresh the list after deletion
+      // The UI will update automatically through the real-time subscription
     } catch (error) {
       console.error('Error deleting offer:', error);
       toast({
