@@ -1,4 +1,3 @@
-import { Card } from "@/components/ui/card";
 import { useSession } from "@supabase/auth-helpers-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +37,7 @@ export const OfferList = () => {
   // Subscribe to real-time changes
   useEffect(() => {
     const channel = supabase
-      .channel('public:time_transactions')
+      .channel('time_transactions_changes')
       .on(
         'postgres_changes',
         {
@@ -46,8 +45,10 @@ export const OfferList = () => {
           schema: 'public',
           table: 'time_transactions'
         },
-        () => {
-          refetch();
+        (payload) => {
+          if (payload.eventType === 'DELETE') {
+            refetch();
+          }
         }
       )
       .subscribe();
@@ -64,7 +65,7 @@ export const OfferList = () => {
         .delete()
         .eq('id', offerId)
         .eq('user_id', session?.user.id)
-        .eq('status', 'open'); // Only allow deletion of open offers
+        .eq('status', 'open');
 
       if (error) throw error;
 
@@ -72,6 +73,9 @@ export const OfferList = () => {
         title: "Success",
         description: "Offer deleted successfully",
       });
+      
+      // Force immediate refetch after deletion
+      refetch();
     } catch (error) {
       console.error('Error deleting offer:', error);
       toast({
