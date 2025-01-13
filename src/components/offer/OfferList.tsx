@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Offer {
   id: string;
@@ -17,38 +18,59 @@ interface Offer {
 export const OfferList = () => {
   const session = useSession();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const { data: offers, refetch } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('time_transactions')
-        .select('*')
-        .eq('user_id', session?.user.id)
-        .eq('type', 'earned')
-        .order('created_at', { ascending: false });
+      try {
+        const { data, error } = await supabase
+          .from('time_transactions')
+          .select('*')
+          .eq('user_id', session?.user.id)
+          .eq('type', 'earned')
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as Offer[];
+        if (error) {
+          if (error.message.includes('refresh_token_not_found')) {
+            // Handle expired session
+            await supabase.auth.signOut();
+            navigate('/login');
+            toast({
+              title: "Session Expired",
+              description: "Please sign in again",
+              variant: "destructive",
+            });
+            return [];
+          }
+          throw error;
+        }
+        return data as Offer[];
+      } catch (error) {
+        console.error('Error fetching offers:', error);
+        return [];
+      }
     },
     enabled: !!session?.user.id,
   });
 
   // Subscribe to real-time changes
   useEffect(() => {
+    if (!session?.user.id) return;
+
     const channel = supabase
-      .channel('time_transactions_changes')
+      .channel(`time_transactions_${session.user.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
-          table: 'time_transactions'
+          table: 'time_transactions',
+          filter: `user_id=eq.${session.user.id}`
         },
         (payload) => {
-          if (payload.eventType === 'DELETE') {
-            refetch();
-          }
+          console.log('Received real-time update:', payload);
+          refetch();
         }
       )
       .subscribe();
@@ -56,25 +78,45 @@ export const OfferList = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [session?.user.id, refetch]);
 
   const handleDelete = async (offerId: string) => {
+    if (!session?.user.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to delete offers",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('time_transactions')
         .delete()
         .eq('id', offerId)
-        .eq('user_id', session?.user.id)
+        .eq('user_id', session.user.id)
         .eq('status', 'open');
 
-      if (error) throw error;
+      if (error) {
+        if (error.message.includes('refresh_token_not_found')) {
+          await supabase.auth.signOut();
+          navigate('/login');
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw error;
+      }
 
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       });
       
-      // Force immediate refetch after deletion
       refetch();
     } catch (error) {
       console.error('Error deleting offer:', error);
