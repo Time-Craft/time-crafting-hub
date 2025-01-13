@@ -34,18 +34,18 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         },
         (payload) => {
           console.log('Received real-time update:', payload);
-          // Update local state when offer status changes
-          if (payload.new && 'status' in payload.new) {
+          if (payload.eventType === 'DELETE') {
+            // Update both explore and offer page queries
+            queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
+              oldData?.filter(offer => offer.id !== payload.old.id) ?? []
+            );
+            // Also invalidate the queries to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ['offers'] });
+          } else if (payload.new && 'status' in payload.new) {
             const updatedOffer = payload.new as TimeTransaction;
             if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined') {
               setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
             }
-          }
-          // Handle deletions
-          if (payload.eventType === 'DELETE') {
-            queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
-              oldData?.filter(offer => offer.id !== payload.old.id) ?? []
-            );
           }
         }
       )
@@ -55,37 +55,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
-
-  const handleAcceptOffer = async (offer: TimeTransaction) => {
-    try {
-      // Update the offer status to 'in_progress' and set the recipient_id
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({
-          status: 'in_progress',
-          recipient_id: currentUserId
-        })
-        .eq('id', offer.id);
-
-      if (error) throw error;
-
-      // Update local state
-      setAcceptedOffers(prev => new Set([...prev, offer.id]));
-      onAcceptOffer(offer);
-
-      toast({
-        title: "Offer Accepted",
-        description: "Waiting for the offer creator to confirm.",
-      });
-    } catch (error) {
-      console.error('Error accepting offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to accept offer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const handleDelete = async (offerId: string) => {
     try {
@@ -97,9 +66,16 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       const { error } = await supabase
         .from('time_transactions')
         .delete()
-        .eq('id', offerId);
+        .eq('id', offerId)
+        .eq('user_id', currentUserId)
+        .eq('status', 'open');
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
+
+      // Invalidate and refetch to ensure data consistency
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
 
       toast({
         title: "Success",
@@ -180,7 +156,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                 {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"
-                    onClick={() => handleAcceptOffer(offer)}
+                    onClick={() => onAcceptOffer(offer)}
                     disabled={acceptedOffers.has(offer.id)}
                   >
                     {acceptedOffers.has(offer.id) ? 'Offer Accepted' : 'Accept Offer'}
