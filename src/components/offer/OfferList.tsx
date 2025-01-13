@@ -46,8 +46,7 @@ export const OfferList = () => {
           schema: 'public',
           table: 'time_transactions'
         },
-        (payload) => {
-          // Refresh the offers list when changes occur
+        () => {
           refetch();
         }
       )
@@ -73,8 +72,6 @@ export const OfferList = () => {
         title: "Success",
         description: "Offer deleted successfully",
       });
-
-      // The UI will update automatically through the real-time subscription
     } catch (error) {
       console.error('Error deleting offer:', error);
       toast({
