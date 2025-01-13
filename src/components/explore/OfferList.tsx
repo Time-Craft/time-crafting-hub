@@ -1,4 +1,4 @@
-import { User2 } from "lucide-react";
+import { User2, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import type { TimeTransaction } from "@/types/explore";
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface OfferListProps {
   offers: TimeTransaction[] | null;
@@ -18,6 +19,7 @@ interface OfferListProps {
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
   const { toast } = useToast();
   const [acceptedOffers, setAcceptedOffers] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
 
   // Subscribe to real-time updates for offer statuses
   useEffect(() => {
@@ -31,12 +33,19 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
           table: 'time_transactions'
         },
         (payload) => {
+          console.log('Received real-time update:', payload);
           // Update local state when offer status changes
           if (payload.new && 'status' in payload.new) {
             const updatedOffer = payload.new as TimeTransaction;
             if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined') {
               setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
             }
+          }
+          // Handle deletions
+          if (payload.eventType === 'DELETE') {
+            queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
+              oldData?.filter(offer => offer.id !== payload.old.id) ?? []
+            );
           }
         }
       )
@@ -45,7 +54,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [queryClient]);
 
   const handleAcceptOffer = async (offer: TimeTransaction) => {
     try {
@@ -73,6 +82,36 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       toast({
         title: "Error",
         description: "Failed to accept offer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async (offerId: string) => {
+    try {
+      // Optimistically update the UI
+      queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
+        oldData?.filter(offer => offer.id !== offerId) ?? []
+      );
+
+      const { error } = await supabase
+        .from('time_transactions')
+        .delete()
+        .eq('id', offerId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting offer:', error);
+      // Revert optimistic update on error
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+      toast({
+        title: "Error",
+        description: "Failed to delete offer. Please try again.",
         variant: "destructive",
       });
     }
@@ -124,6 +163,15 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                       {offer.status}
                     </Badge>
                     <Badge>{offer.amount} hours</Badge>
+                    {currentUserId === offer.user_id && offer.status === 'open' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(offer.id)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-500" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{offer.description}</p>
