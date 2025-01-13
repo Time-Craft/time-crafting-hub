@@ -1,5 +1,5 @@
 import { useSession } from "@supabase/auth-helpers-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -19,8 +19,9 @@ export const OfferList = () => {
   const session = useSession();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const { data: offers, refetch, setData } = useQuery({
+  const { data: offers, refetch } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
       try {
@@ -69,9 +70,9 @@ export const OfferList = () => {
         (payload) => {
           console.log('Received real-time update:', payload);
           if (payload.eventType === 'DELETE') {
-            // Immediately update UI by filtering out the deleted offer
-            setData((currentOffers) => 
-              currentOffers?.filter(offer => offer.id !== payload.old.id) ?? []
+            // Optimistically update the cache
+            queryClient.setQueryData(['offers'], (oldData: Offer[] | undefined) => 
+              oldData?.filter(offer => offer.id !== payload.old.id) ?? []
             );
           } else {
             refetch();
@@ -83,7 +84,7 @@ export const OfferList = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.user.id, refetch, setData]);
+  }, [session?.user.id, refetch, queryClient]);
 
   const handleDelete = async (offerId: string) => {
     if (!session?.user.id) {
@@ -96,6 +97,11 @@ export const OfferList = () => {
     }
 
     try {
+      // Optimistically update the UI
+      queryClient.setQueryData(['offers'], (oldData: Offer[] | undefined) => 
+        oldData?.filter(offer => offer.id !== offerId) ?? []
+      );
+
       const { error } = await supabase
         .from('time_transactions')
         .delete()
@@ -117,17 +123,14 @@ export const OfferList = () => {
         throw error;
       }
 
-      // Immediately update UI by filtering out the deleted offer
-      setData((currentOffers) => 
-        currentOffers?.filter(offer => offer.id !== offerId) ?? []
-      );
-
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       });
     } catch (error) {
       console.error('Error deleting offer:', error);
+      // Revert optimistic update on error
+      refetch();
       toast({
         title: "Error",
         description: "Failed to delete offer. Please try again.",
