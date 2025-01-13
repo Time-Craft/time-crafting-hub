@@ -20,7 +20,7 @@ export const OfferList = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const { data: offers, refetch } = useQuery({
+  const { data: offers, refetch, setData } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
       try {
@@ -33,7 +33,6 @@ export const OfferList = () => {
 
         if (error) {
           if (error.message.includes('refresh_token_not_found')) {
-            // Handle expired session
             await supabase.auth.signOut();
             navigate('/login');
             toast({
@@ -54,7 +53,6 @@ export const OfferList = () => {
     enabled: !!session?.user.id,
   });
 
-  // Subscribe to real-time changes
   useEffect(() => {
     if (!session?.user.id) return;
 
@@ -70,7 +68,14 @@ export const OfferList = () => {
         },
         (payload) => {
           console.log('Received real-time update:', payload);
-          refetch();
+          if (payload.eventType === 'DELETE') {
+            // Immediately update UI by filtering out the deleted offer
+            setData((currentOffers) => 
+              currentOffers?.filter(offer => offer.id !== payload.old.id) ?? []
+            );
+          } else {
+            refetch();
+          }
         }
       )
       .subscribe();
@@ -78,7 +83,7 @@ export const OfferList = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.user.id, refetch]);
+  }, [session?.user.id, refetch, setData]);
 
   const handleDelete = async (offerId: string) => {
     if (!session?.user.id) {
@@ -112,12 +117,15 @@ export const OfferList = () => {
         throw error;
       }
 
+      // Immediately update UI by filtering out the deleted offer
+      setData((currentOffers) => 
+        currentOffers?.filter(offer => offer.id !== offerId) ?? []
+      );
+
       toast({
         title: "Success",
         description: "Offer deleted successfully",
       });
-      
-      refetch();
     } catch (error) {
       console.error('Error deleting offer:', error);
       toast({
