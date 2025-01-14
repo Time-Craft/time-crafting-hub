@@ -15,13 +15,19 @@ const Login = () => {
   useEffect(() => {
     // Check if there's an existing session on component mount
     const checkSession = async () => {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        handleAuthError(sessionError);
-        return;
-      }
-      if (session) {
-        handleSuccessfulAuth(session);
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          handleAuthError(sessionError);
+          return;
+        }
+        if (session) {
+          handleSuccessfulAuth(session);
+        }
+      } catch (error) {
+        console.error('Session check error:', error);
+        // Force sign out if session check fails
+        await supabase.auth.signOut();
       }
     };
     checkSession();
@@ -51,11 +57,16 @@ const Login = () => {
   const handleSuccessfulAuth = async (session: any) => {
     try {
       // Check if user has completed onboarding
-      const { data: profile } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('username')
         .eq('id', session.user.id)
         .single();
+
+      if (profileError) {
+        console.error('Profile check error:', profileError);
+        throw profileError;
+      }
 
       toast({
         title: "Welcome back!",
@@ -91,6 +102,7 @@ const Login = () => {
     }
     
     setError(errorMessage);
+    console.error('Auth error:', error);
   };
 
   return (
