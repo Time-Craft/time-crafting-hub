@@ -112,6 +112,50 @@ const Home = () => {
         </div>
       </header>
 
+      {/* Pending Offers Section - Moved to top for visibility */}
+      <section className="p-6">
+        <div className="max-w-lg mx-auto">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Pending Offers</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {!pendingOffers?.length ? (
+                  <p className="text-gray-500 text-center">No pending offers to confirm</p>
+                ) : (
+                  pendingOffers?.map((offer) => (
+                    <div key={offer.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="font-medium">{offer.service_type}</h3>
+                          <p className="text-sm text-gray-600">{offer.description}</p>
+                          <p className="text-sm font-medium mt-1">{offer.amount} hours</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleConfirmOffer(offer)}
+                          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
+                        >
+                          Confirm
+                        </button>
+                        <button
+                          onClick={() => handleDeclineOffer(offer)}
+                          className="bg-destructive text-white px-4 py-2 rounded hover:bg-destructive/90"
+                        >
+                          Decline
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {/* Time Balance Section */}
       <section className="p-6">
         <div className="max-w-lg mx-auto">
@@ -168,50 +212,6 @@ const Home = () => {
                   </div>
                   <span className="font-semibold">15</span>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Pending Offers Section */}
-      <section className="p-6 pt-0">
-        <div className="max-w-lg mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Pending Offers</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {pendingOffers?.length === 0 ? (
-                  <p className="text-gray-500 text-center">No pending offers to confirm</p>
-                ) : (
-                  pendingOffers?.map((offer) => (
-                    <div key={offer.id} className="border rounded-lg p-4">
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-medium">{offer.service_type}</h3>
-                          <p className="text-sm text-gray-600">{offer.description}</p>
-                          <p className="text-sm font-medium mt-1">{offer.amount} hours</p>
-                        </div>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleConfirmOffer(offer)}
-                          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
-                        >
-                          Confirm
-                        </button>
-                        <button
-                          onClick={() => handleDeclineOffer(offer)}
-                          className="bg-destructive text-white px-4 py-2 rounded hover:bg-destructive/90"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             </CardContent>
           </Card>

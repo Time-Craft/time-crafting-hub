@@ -41,7 +41,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
             queryClient.invalidateQueries({ queryKey: ['offers'] });
           } else if (payload.new && 'status' in payload.new) {
             const updatedOffer = payload.new as TimeTransaction;
-            if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined') {
+            if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined' || updatedOffer.status === 'in_progress') {
               setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
             }
             // Refresh the offers data to reflect the status change
@@ -85,58 +85,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       toast({
         title: "Error",
         description: "Failed to delete offer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleConfirmOffer = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ status: 'accepted' })
-        .eq('id', offerId)
-        .eq('user_id', currentUserId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Offer confirmed successfully",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-    } catch (error) {
-      console.error('Error confirming offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to confirm offer",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectOffer = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ status: 'declined' })
-        .eq('id', offerId)
-        .eq('user_id', currentUserId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Offer rejected",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-    } catch (error) {
-      console.error('Error rejecting offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject offer",
         variant: "destructive",
       });
     }
@@ -207,30 +155,8 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                     onClick={() => onAcceptOffer(offer)}
                     disabled={acceptedOffers.has(offer.id)}
                   >
-                    {acceptedOffers.has(offer.id) ? 'Offer Accepted' : 'Accept Offer'}
+                    {acceptedOffers.has(offer.id) ? 'Pending' : 'Accept Offer'}
                   </Button>
-                )}
-
-                {/* Confirmation buttons for offer creator */}
-                {currentUserId === offer.user_id && offer.status === 'in_progress' && (
-                  <div className="mt-4 flex gap-2">
-                    <Button
-                      onClick={() => handleConfirmOffer(offer.id)}
-                      className="bg-green-500 hover:bg-green-600"
-                      size="sm"
-                    >
-                      <Check className="h-4 w-4 mr-2" />
-                      Confirm
-                    </Button>
-                    <Button
-                      onClick={() => handleRejectOffer(offer.id)}
-                      variant="destructive"
-                      size="sm"
-                    >
-                      <X className="h-4 w-4 mr-2" />
-                      Reject
-                    </Button>
-                  </div>
                 )}
 
                 {/* Status messages */}
