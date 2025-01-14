@@ -204,7 +204,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                     onClick={() => onAcceptOffer(offer)}
                     disabled={acceptedOffers.has(offer.id)}
                   >
-                    {acceptedOffers.has(offer.id) ? 'Pending Offer' : 'Accept Offer'}
+                    {acceptedOffers.has(offer.id) ? 'Pending' : 'Accept Offer'}
                   </Button>
                 )}
 
