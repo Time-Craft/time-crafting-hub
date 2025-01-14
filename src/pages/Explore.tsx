@@ -87,7 +87,8 @@ const Explore = () => {
   );
 
   // Handle accepting an offer
-  const handleAcceptOffer = async (offer: TimeTransaction) => {
+
+const handleAcceptOffer = async (offer: TimeTransaction) => {
     if (!session?.user.id) {
       toast({
         title: "Error",
@@ -106,29 +107,39 @@ const Explore = () => {
       return;
     }
 
-    const { error } = await supabase
-      .from('time_transactions')
-      .update({ 
-        recipient_id: session.user.id,
-        status: 'in_progress'
-      })
-      .eq('id', offer.id);
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ 
+          recipient_id: session.user.id,
+          status: 'in_progress'
+        })
+        .eq('id', offer.id)
+        .eq('status', 'open');
 
-    if (error) {
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to accept offer",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Offer accepted successfully. Waiting for confirmation.",
+      });
+
+      refetchOffers();
+    } catch (error) {
+      console.error('Error accepting offer:', error);
       toast({
         title: "Error",
         description: "Failed to accept offer",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Success",
-      description: "Offer accepted successfully",
-    });
-
-    refetchOffers();
   };
 
   return (
@@ -184,3 +195,4 @@ const Explore = () => {
 };
 
 export default Explore;
+

@@ -1,4 +1,4 @@
-import { User2, Trash2 } from "lucide-react";
+import { User2, Trash2, Check, X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,17 +35,17 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         (payload) => {
           console.log('Received real-time update:', payload);
           if (payload.eventType === 'DELETE') {
-            // Update both explore and offer page queries
             queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
               oldData?.filter(offer => offer.id !== payload.old.id) ?? []
             );
-            // Also invalidate the queries to ensure fresh data
             queryClient.invalidateQueries({ queryKey: ['offers'] });
           } else if (payload.new && 'status' in payload.new) {
             const updatedOffer = payload.new as TimeTransaction;
             if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined') {
               setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
             }
+            // Refresh the offers data to reflect the status change
+            queryClient.invalidateQueries({ queryKey: ['offers'] });
           }
         }
       )
@@ -58,7 +58,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
 
   const handleDelete = async (offerId: string) => {
     try {
-      // Optimistically update the UI
       queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
         oldData?.filter(offer => offer.id !== offerId) ?? []
       );
@@ -74,7 +73,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         throw error;
       }
 
-      // Invalidate and refetch to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['offers'] });
 
       toast({
@@ -83,11 +81,62 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       });
     } catch (error) {
       console.error('Error deleting offer:', error);
-      // Revert optimistic update on error
       queryClient.invalidateQueries({ queryKey: ['offers'] });
       toast({
         title: "Error",
         description: "Failed to delete offer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleConfirmOffer = async (offerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ status: 'accepted' })
+        .eq('id', offerId)
+        .eq('user_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer confirmed successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    } catch (error) {
+      console.error('Error confirming offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to confirm offer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRejectOffer = async (offerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ status: 'declined' })
+        .eq('id', offerId)
+        .eq('user_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer rejected",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    } catch (error) {
+      console.error('Error rejecting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject offer",
         variant: "destructive",
       });
     }
@@ -160,6 +209,28 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                   >
                     {acceptedOffers.has(offer.id) ? 'Offer Accepted' : 'Accept Offer'}
                   </Button>
+                )}
+
+                {/* Confirmation buttons for offer creator */}
+                {currentUserId === offer.user_id && offer.status === 'in_progress' && (
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      onClick={() => handleConfirmOffer(offer.id)}
+                      className="bg-green-500 hover:bg-green-600"
+                      size="sm"
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirm
+                    </Button>
+                    <Button
+                      onClick={() => handleRejectOffer(offer.id)}
+                      variant="destructive"
+                      size="sm"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Reject
+                    </Button>
+                  </div>
                 )}
 
                 {/* Status messages */}
