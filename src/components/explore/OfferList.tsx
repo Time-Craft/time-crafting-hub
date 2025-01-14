@@ -152,7 +152,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                 </div>
                 <p className="mt-2 text-sm text-gray-600">{offer.description}</p>
                 
-                {/* Show Accept button only if user is not the offer creator and offer is open */}
                 {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"

@@ -74,6 +74,8 @@ export const OfferList = () => {
             queryClient.setQueryData(['offers'], (oldData: Offer[] | undefined) => 
               oldData?.filter(offer => offer.id !== payload.old.id) ?? []
             );
+            // Also invalidate the queries to ensure fresh data
+            queryClient.invalidateQueries({ queryKey: ['offers'] });
           } else {
             refetch();
           }
