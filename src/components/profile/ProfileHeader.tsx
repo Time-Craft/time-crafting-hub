@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { UserCheck, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -118,9 +118,8 @@ export const ProfileHeader = () => {
               className="max-w-[200px]"
             />
           ) : (
-            <div className="flex items-center gap-2">
+            <div>
               <h1 className="text-xl font-semibold">{username}</h1>
-              <UserCheck className="text-primary" size={20} />
             </div>
           )}
         </div>
