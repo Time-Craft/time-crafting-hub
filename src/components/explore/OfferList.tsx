@@ -37,10 +37,9 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
             queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
               oldData?.filter(offer => offer.id !== payload.old.id) ?? []
             );
-            queryClient.invalidateQueries({ queryKey: ['offers'] });
           } else if (payload.new && 'status' in payload.new) {
             const updatedOffer = payload.new as TimeTransaction;
-            if (updatedOffer.status === 'accepted' || updatedOffer.status === 'declined' || updatedOffer.status === 'in_progress') {
+            if (updatedOffer.status === 'in_progress') {
               setAcceptedOffers(prev => new Set([...prev, updatedOffer.id]));
             }
             queryClient.invalidateQueries({ queryKey: ['offers'] });
@@ -56,10 +55,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
 
   const handleDelete = async (offerId: string) => {
     try {
-      queryClient.setQueryData(['offers'], (oldData: TimeTransaction[] | undefined) => 
-        oldData?.filter(offer => offer.id !== offerId) ?? []
-      );
-
       const { error } = await supabase
         .from('time_transactions')
         .delete()
@@ -77,7 +72,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       });
     } catch (error) {
       console.error('Error deleting offer:', error);
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
       toast({
         title: "Error",
         description: "Failed to delete offer. Please try again.",
@@ -153,6 +147,11 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
     }
   };
 
+  const handleAcceptClick = async (offer: TimeTransaction) => {
+    setAcceptedOffers(prev => new Set([...prev, offer.id]));
+    await onAcceptOffer(offer);
+  };
+
   if (!offers?.length) {
     return (
       <div className="text-center py-4 text-gray-500">
@@ -201,7 +200,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
                 {currentUserId !== offer.user_id && offer.status === 'open' && (
                   <Button 
                     className="mt-4"
-                    onClick={() => onAcceptOffer(offer)}
+                    onClick={() => handleAcceptClick(offer)}
                     disabled={acceptedOffers.has(offer.id)}
                   >
                     {acceptedOffers.has(offer.id) ? 'Pending Offer' : 'Accept Offer'}
