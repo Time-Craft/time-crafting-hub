@@ -13,7 +13,22 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Check if there's an existing session on component mount
+    // Clear any existing sessions on component mount
+    const clearExistingSession = async () => {
+      try {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+          console.error('Error clearing session:', signOutError);
+          // Don't show error to user as this is just cleanup
+        }
+      } catch (error) {
+        console.error('Unexpected error during session cleanup:', error);
+      }
+    };
+    
+    clearExistingSession();
+
+    // Check for existing session after cleanup
     const checkSession = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -26,10 +41,10 @@ const Login = () => {
         }
       } catch (error) {
         console.error('Session check error:', error);
-        // Force sign out if session check fails
         await supabase.auth.signOut();
       }
     };
+    
     checkSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -39,10 +54,7 @@ const Login = () => {
         }
       } else if (event === 'SIGNED_OUT') {
         setError(null);
-        // Clear any stored tokens
-        await supabase.auth.signOut();
       } else if (event === 'TOKEN_REFRESHED') {
-        // Handle successful token refresh
         if (session) {
           handleSuccessfulAuth(session);
         }
@@ -56,7 +68,6 @@ const Login = () => {
 
   const handleSuccessfulAuth = async (session: any) => {
     try {
-      // Check if user has completed onboarding
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('username')
@@ -74,11 +85,10 @@ const Login = () => {
         duration: 2000,
       });
 
-      // If no username is set, redirect to onboarding
       if (!profile?.username) {
-        navigate('/onboarding');
+        navigate('/onboarding', { replace: true });
       } else {
-        navigate('/home');
+        navigate('/home', { replace: true });
       }
     } catch (error) {
       console.error('Error checking profile:', error);
@@ -95,7 +105,8 @@ const Login = () => {
       errorMessage = 'This email is already registered. Please sign in instead.';
     } else if (error.message.includes('email_not_confirmed')) {
       errorMessage = 'Please verify your email address before signing in.';
-    } else if (error.message.includes('refresh_token_not_found')) {
+    } else if (error.message.includes('refresh_token_not_found') || 
+               error.message.includes('session_not_found')) {
       errorMessage = 'Your session has expired. Please sign in again.';
       // Force a new sign in when refresh token is invalid
       supabase.auth.signOut();
