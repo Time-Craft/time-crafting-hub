@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { Camera } from "lucide-react";
+import { Camera, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface ProfileImageProps {
   username: string;
@@ -74,6 +79,36 @@ export const ProfileImage = ({ username, avatarUrl, userId, onImageUpdate }: Pro
     }
   };
 
+  const handleRemoveImage = async () => {
+    if (!avatarUrl) return;
+
+    try {
+      const filePath = avatarUrl.split('/').pop();
+      if (filePath) {
+        await supabase.storage
+          .from('profile_images')
+          .remove([filePath]);
+      }
+
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', userId);
+
+      onImageUpdate(null);
+      toast({
+        title: "Success",
+        description: "Profile image removed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove profile image",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="relative">
       <Avatar className="h-16 w-16">
@@ -81,20 +116,43 @@ export const ProfileImage = ({ username, avatarUrl, userId, onImageUpdate }: Pro
         <AvatarFallback>{username?.slice(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
       <div className="absolute -bottom-1 -right-1">
-        <label 
-          className="p-1 bg-primary rounded-full cursor-pointer hover:bg-primary-dark transition-colors"
-          htmlFor="profile-image"
-        >
-          <Camera className="h-4 w-4 text-white" />
-          <input
-            type="file"
-            id="profile-image"
-            className="hidden"
-            accept="image/*"
-            onChange={handleImageUpload}
-            disabled={isUploading}
-          />
-        </label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <button 
+              className="p-1 bg-primary rounded-full cursor-pointer hover:bg-primary-dark transition-colors"
+            >
+              <Camera className="h-4 w-4 text-white" />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-48">
+            <div className="flex flex-col gap-2">
+              <label 
+                className="flex items-center gap-2 p-2 hover:bg-secondary rounded-md cursor-pointer transition-colors"
+                htmlFor="profile-image"
+              >
+                <Camera className="h-4 w-4" />
+                <span>Choose image</span>
+                <input
+                  type="file"
+                  id="profile-image"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                />
+              </label>
+              {avatarUrl && (
+                <button
+                  onClick={handleRemoveImage}
+                  className="flex items-center gap-2 p-2 hover:bg-secondary rounded-md text-destructive transition-colors"
+                >
+                  <X className="h-4 w-4" />
+                  <span>Remove image</span>
+                </button>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
