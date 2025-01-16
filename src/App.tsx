@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { SessionContextProvider } from '@supabase/auth-helpers-react';
 import { useEffect, useState } from 'react';
+import { useNotifications } from "./hooks/useNotifications";
 import Onboarding from "./pages/Onboarding";
 import Login from "./pages/Login";
 import Home from "./pages/Home";
@@ -19,6 +20,7 @@ const queryClient = new QueryClient();
 // Protected Route wrapper component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  useNotifications(); // Add notifications hook to protected routes
 
   useEffect(() => {
     const checkAuth = async () => {
