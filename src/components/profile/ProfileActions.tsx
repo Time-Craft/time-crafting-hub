@@ -22,17 +22,20 @@ export const ProfileActions = ({
 
   const handleLogout = async () => {
     try {
-      // First clear the local session
-      await supabase.auth.clearSession();
-      // Then attempt to logout
-      await supabase.auth.signOut();
+      // Attempt to sign out
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Unexpected logout error:', error);
     } finally {
-      // Always navigate to login page regardless of logout success/failure
-      navigate('/login');
-      // Call the parent's onLogout handler if provided
-      propOnLogout();
+      // Always navigate to login page and call the parent's onLogout
+      // regardless of whether the signOut was successful
+      navigate('/login', { replace: true });
+      if (propOnLogout) {
+        propOnLogout();
+      }
     }
   };
 
