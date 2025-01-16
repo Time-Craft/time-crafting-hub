@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Camera, X } from "lucide-react";
+import { Camera } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -74,43 +74,13 @@ export const ProfileImage = ({ username, avatarUrl, userId, onImageUpdate }: Pro
     }
   };
 
-  const handleRemoveImage = async () => {
-    if (!avatarUrl) return;
-
-    try {
-      const filePath = avatarUrl.split('/').pop();
-      if (filePath) {
-        await supabase.storage
-          .from('profile_images')
-          .remove([filePath]);
-      }
-
-      await supabase
-        .from('profiles')
-        .update({ avatar_url: null })
-        .eq('id', userId);
-
-      onImageUpdate(null);
-      toast({
-        title: "Success",
-        description: "Profile image removed successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to remove profile image",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <div className="relative">
       <Avatar className="h-16 w-16">
         <AvatarImage src={avatarUrl || "/placeholder.svg"} />
         <AvatarFallback>{username?.slice(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
-      <div className="absolute -bottom-1 -right-1 flex gap-1">
+      <div className="absolute -bottom-1 -right-1">
         <label 
           className="p-1 bg-primary rounded-full cursor-pointer hover:bg-primary-dark transition-colors"
           htmlFor="profile-image"
@@ -125,14 +95,6 @@ export const ProfileImage = ({ username, avatarUrl, userId, onImageUpdate }: Pro
             disabled={isUploading}
           />
         </label>
-        {avatarUrl && (
-          <button
-            onClick={handleRemoveImage}
-            className="p-1 bg-destructive rounded-full cursor-pointer hover:bg-destructive/90 transition-colors"
-          >
-            <X className="h-4 w-4 text-white" />
-          </button>
-        )}
       </div>
     </div>
   );
