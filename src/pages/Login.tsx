@@ -13,27 +13,28 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Clear any existing sessions on component mount
-    const clearExistingSession = async () => {
+    const cleanupSession = async () => {
       try {
         const { error: signOutError } = await supabase.auth.signOut();
         if (signOutError) {
-          console.error('Error clearing session:', signOutError);
-          // Don't show error to user as this is just cleanup
+          // Ignore session_not_found errors during cleanup
+          if (!signOutError.message.includes('session_not_found')) {
+            console.error('Error during session cleanup:', signOutError);
+          }
         }
       } catch (error) {
+        // Ignore cleanup errors as they're not critical
         console.error('Unexpected error during session cleanup:', error);
       }
     };
-    
-    clearExistingSession();
 
-    // Check for existing session after cleanup
     const checkSession = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
-          handleAuthError(sessionError);
+          if (!sessionError.message.includes('session_not_found')) {
+            handleAuthError(sessionError);
+          }
           return;
         }
         if (session) {
@@ -41,11 +42,12 @@ const Login = () => {
         }
       } catch (error) {
         console.error('Session check error:', error);
-        await supabase.auth.signOut();
+        await cleanupSession();
       }
     };
-    
-    checkSession();
+
+    // Clean up any existing session first
+    cleanupSession().then(() => checkSession());
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
@@ -75,8 +77,10 @@ const Login = () => {
         .single();
 
       if (profileError) {
-        console.error('Profile check error:', profileError);
-        throw profileError;
+        if (!profileError.message.includes('session_not_found')) {
+          console.error('Profile check error:', profileError);
+          throw profileError;
+        }
       }
 
       toast({
