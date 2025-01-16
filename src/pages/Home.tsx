@@ -38,12 +38,14 @@ const Home = () => {
           .order('created_at', { ascending: false });
 
         if (error) {
-          if (error.message.includes('refresh_token_not_found')) {
+          if (error.message.includes('refresh_token_not_found') || 
+              error.message.includes('session_not_found')) {
             toast({
               title: "Session Expired",
               description: "Please sign in again to continue.",
               variant: "destructive",
             });
+            await supabase.auth.signOut();
             navigate('/login', { replace: true });
             return [];
           }
@@ -70,12 +72,14 @@ const Home = () => {
         .eq('id', offer.id);
 
       if (error) {
-        if (error.message.includes('refresh_token_not_found')) {
+        if (error.message.includes('refresh_token_not_found') || 
+            error.message.includes('session_not_found')) {
           toast({
             title: "Session Expired",
             description: "Please sign in again to continue.",
             variant: "destructive",
           });
+          await supabase.auth.signOut();
           navigate('/login', { replace: true });
           return;
         }
@@ -105,12 +109,14 @@ const Home = () => {
         .eq('id', offer.id);
 
       if (error) {
-        if (error.message.includes('refresh_token_not_found')) {
+        if (error.message.includes('refresh_token_not_found') || 
+            error.message.includes('session_not_found')) {
           toast({
             title: "Session Expired",
             description: "Please sign in again to continue.",
             variant: "destructive",
           });
+          await supabase.auth.signOut();
           navigate('/login', { replace: true });
           return;
         }
@@ -148,12 +154,14 @@ const Home = () => {
           .single();
 
         if (profileError) {
-          if (profileError.message.includes('refresh_token_not_found')) {
+          if (profileError.message.includes('refresh_token_not_found') || 
+              profileError.message.includes('session_not_found')) {
             toast({
               title: "Session Expired",
               description: "Please sign in again to continue.",
               variant: "destructive",
             });
+            await supabase.auth.signOut();
             navigate('/login', { replace: true });
             return;
           }
@@ -163,6 +171,7 @@ const Home = () => {
         setUsername(profile?.username || session.user.email?.split('@')[0] || 'User');
       } catch (error: any) {
         console.error('Auth check error:', error);
+        await supabase.auth.signOut();
         navigate('/login', { replace: true });
       }
     };
