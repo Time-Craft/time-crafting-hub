@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useOfferRealtime } from "@/hooks/useOfferRealtime";
 import { useOfferManagement } from "@/hooks/useOfferManagement";
 import { OfferCard } from "./OfferCard";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface OfferListProps {
   offers: TimeTransaction[] | null;
@@ -13,13 +15,40 @@ interface OfferListProps {
 
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
   const [acceptedOffers, setAcceptedOffers] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const { handleDelete, handleConfirmOffer, handleRejectOffer } = useOfferManagement(currentUserId);
 
   useOfferRealtime(setAcceptedOffers);
 
   const handleAcceptClick = async (offer: TimeTransaction) => {
-    setAcceptedOffers(prev => new Set([...prev, offer.id]));
-    await onAcceptOffer(offer);
+    try {
+      setAcceptedOffers(prev => new Set([...prev, offer.id]));
+      await onAcceptOffer(offer);
+    } catch (error: any) {
+      // Check specifically for refresh token errors
+      if (error?.message?.includes('refresh_token_not_found')) {
+        toast({
+          title: "Session Expired",
+          description: "Please sign in again to continue.",
+          variant: "destructive",
+        });
+        navigate('/login', { replace: true });
+        return;
+      }
+      // Handle other errors
+      toast({
+        title: "Error",
+        description: "Failed to accept offer. Please try again.",
+        variant: "destructive",
+      });
+      // Remove from accepted offers if there was an error
+      setAcceptedOffers(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(offer.id);
+        return newSet;
+      });
+    }
   };
 
   if (!offers?.length) {
