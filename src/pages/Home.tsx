@@ -17,90 +17,160 @@ const Home = () => {
   const { data: pendingOffers, refetch: refetchPendingOffers } = useQuery({
     queryKey: ['pending-offers'],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return [];
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          navigate('/login', { replace: true });
+          return [];
+        }
 
-      const { data, error } = await supabase
-        .from('time_transactions')
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            avatar_url
-          )
-        `)
-        .eq('user_id', session.user.id)
-        .eq('status', 'in_progress')
-        .order('created_at', { ascending: false });
+        const { data, error } = await supabase
+          .from('time_transactions')
+          .select(`
+            *,
+            profiles:user_id (
+              username,
+              avatar_url
+            )
+          `)
+          .eq('user_id', session.user.id)
+          .eq('status', 'in_progress')
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data as TimeTransaction[];
+        if (error) {
+          if (error.message.includes('refresh_token_not_found')) {
+            toast({
+              title: "Session Expired",
+              description: "Please sign in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/login', { replace: true });
+            return [];
+          }
+          throw error;
+        }
+        return data as TimeTransaction[];
+      } catch (error: any) {
+        console.error('Error fetching pending offers:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load pending offers. Please try again.",
+          variant: "destructive",
+        });
+        return [];
+      }
     }
   });
 
   const handleConfirmOffer = async (offer: TimeTransaction) => {
-    const { error } = await supabase
-      .from('time_transactions')
-      .update({ status: 'accepted' })
-      .eq('id', offer.id);
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ status: 'accepted' })
+        .eq('id', offer.id);
 
-    if (error) {
+      if (error) {
+        if (error.message.includes('refresh_token_not_found')) {
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/login', { replace: true });
+          return;
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Offer confirmed successfully",
+      });
+      refetchPendingOffers();
+    } catch (error: any) {
+      console.error('Error confirming offer:', error);
       toast({
         title: "Error",
-        description: "Failed to confirm offer",
+        description: "Failed to confirm offer. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Success",
-      description: "Offer confirmed successfully",
-    });
-    refetchPendingOffers();
   };
 
   const handleDeclineOffer = async (offer: TimeTransaction) => {
-    const { error } = await supabase
-      .from('time_transactions')
-      .update({ status: 'declined' })
-      .eq('id', offer.id);
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ status: 'declined' })
+        .eq('id', offer.id);
 
-    if (error) {
+      if (error) {
+        if (error.message.includes('refresh_token_not_found')) {
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          navigate('/login', { replace: true });
+          return;
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Offer declined successfully",
+      });
+      refetchPendingOffers();
+    } catch (error: any) {
+      console.error('Error declining offer:', error);
       toast({
         title: "Error",
-        description: "Failed to decline offer",
+        description: "Failed to decline offer. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    toast({
-      title: "Success",
-      description: "Offer declined successfully",
-    });
-    refetchPendingOffers();
   };
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        navigate('/login');
-        return;
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError || !session) {
+          navigate('/login', { replace: true });
+          return;
+        }
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profileError) {
+          if (profileError.message.includes('refresh_token_not_found')) {
+            toast({
+              title: "Session Expired",
+              description: "Please sign in again to continue.",
+              variant: "destructive",
+            });
+            navigate('/login', { replace: true });
+            return;
+          }
+          throw profileError;
+        }
+
+        setUsername(profile?.username || session.user.email?.split('@')[0] || 'User');
+      } catch (error: any) {
+        console.error('Auth check error:', error);
+        navigate('/login', { replace: true });
       }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('username')
-        .eq('id', session.user.id)
-        .single();
-
-      setUsername(profile?.username || session.user.email?.split('@')[0] || 'User');
     };
 
     checkAuth();
-  }, [navigate]);
+  }, [navigate, toast]);
+
+  // ... keep existing code (JSX for the component layout)
 
   return (
     <div className="min-h-screen bg-white pb-20">
