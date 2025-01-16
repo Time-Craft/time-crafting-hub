@@ -15,15 +15,18 @@ const Login = () => {
   useEffect(() => {
     const cleanupSession = async () => {
       try {
-        const { error: signOutError } = await supabase.auth.signOut();
-        if (signOutError) {
-          // Ignore session_not_found errors during cleanup
-          if (!signOutError.message.includes('session_not_found')) {
-            console.error('Error during session cleanup:', signOutError);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const { error: signOutError } = await supabase.auth.signOut();
+          if (signOutError) {
+            // Only log non-session_not_found errors as they're expected during cleanup
+            if (!signOutError.message.includes('session_not_found')) {
+              console.error('Error during session cleanup:', signOutError);
+            }
           }
         }
       } catch (error) {
-        // Ignore cleanup errors as they're not critical
+        // Ignore cleanup errors as they're not critical for login flow
         console.error('Unexpected error during session cleanup:', error);
       }
     };
@@ -46,7 +49,7 @@ const Login = () => {
       }
     };
 
-    // Clean up any existing session first
+    // Clean up any existing session first, then check for current session
     cleanupSession().then(() => checkSession());
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
