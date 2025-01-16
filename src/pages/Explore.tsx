@@ -1,14 +1,13 @@
 import { useState, useEffect } from "react";
-import { MapPin, Filter } from "lucide-react";
-import { Toggle } from "@/components/ui/toggle";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@supabase/auth-helpers-react";
-import { SearchBar } from "@/components/explore/SearchBar";
 import { UserList } from "@/components/explore/UserList";
 import { OfferList } from "@/components/explore/OfferList";
+import { ExploreHeader } from "@/components/explore/ExploreHeader";
+import { MapView } from "@/components/explore/MapView";
 import type { Profile, TimeTransaction } from "@/types/explore";
 
 const Explore = () => {
@@ -32,7 +31,7 @@ const Explore = () => {
     }
   });
 
-  // Fetch available offers with user details, excluding current user's offers
+  // Fetch available offers with user details
   const { data: offers, refetch: refetchOffers } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
@@ -48,7 +47,7 @@ const Explore = () => {
           )
         `)
         .eq('type', 'earned')
-        .neq('user_id', session.user.id) // Filter out current user's offers
+        .neq('user_id', session.user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -86,9 +85,7 @@ const Explore = () => {
     )
   );
 
-  // Handle accepting an offer
-
-const handleAcceptOffer = async (offer: TimeTransaction) => {
+  const handleAcceptOffer = async (offer: TimeTransaction) => {
     if (!session?.user.id) {
       toast({
         title: "Error",
@@ -144,42 +141,20 @@ const handleAcceptOffer = async (offer: TimeTransaction) => {
 
   return (
     <div className="min-h-screen pb-20">
-      <div className="p-4 bg-white shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-semibold">Explore</h1>
-          <Toggle 
-            aria-label="Toggle view" 
-            onClick={() => setView(view === "map" ? "list" : "map")}
-          >
-            {view === "map" ? "List View" : "Map View"}
-          </Toggle>
-        </div>
-        
-        <div className="space-y-4">
-          <SearchBar
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            setIsSearchFocused={setIsSearchFocused}
-          />
-          
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <MapPin size={16} />
-            <span>Within {range} km</span>
-            <button className="ml-auto flex items-center gap-1">
-              <Filter size={16} />
-              Filter
-            </button>
-          </div>
-        </div>
-      </div>
+      <ExploreHeader
+        view={view}
+        setView={setView}
+        range={range}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        setIsSearchFocused={setIsSearchFocused}
+      />
 
       {isSearchFocused && searchQuery ? (
         <UserList profiles={filteredProfiles} />
       ) : (
         view === "map" ? (
-          <div className="bg-gray-100 h-[60vh] rounded-lg flex items-center justify-center">
-            Interactive Map View (Coming Soon)
-          </div>
+          <MapView />
         ) : (
           <OfferList 
             offers={offers}
@@ -195,4 +170,3 @@ const handleAcceptOffer = async (offer: TimeTransaction) => {
 };
 
 export default Explore;
-
