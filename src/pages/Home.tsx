@@ -59,7 +59,13 @@ const Home = () => {
 
       const { data, error } = await supabase
         .from('time_transactions')
-        .select('*')
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            avatar_url
+          )
+        `)
         .eq('user_id', session.user.id)
         .eq('status', 'in_progress');
 
