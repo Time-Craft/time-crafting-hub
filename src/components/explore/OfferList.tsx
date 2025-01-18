@@ -15,12 +15,9 @@ interface OfferListProps {
 }
 
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
-  const [acceptedOffers, setAcceptedOffers] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleDelete, handleConfirmOffer, handleRejectOffer } = useOfferManagement(currentUserId);
-
-  useOfferRealtime(setAcceptedOffers);
 
   const handleAcceptClick = async (offer: TimeTransaction) => {
     if (!currentUserId) {
@@ -51,7 +48,18 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         return;
       }
 
-      setAcceptedOffers(prev => new Set([...prev, offer.id]));
+      // Update the offer status in the database
+      const { error: updateError } = await supabase
+        .from('time_transactions')
+        .update({ 
+          status: 'in_progress',
+          recipient_id: currentUserId 
+        })
+        .eq('id', offer.id)
+        .eq('status', 'open');
+
+      if (updateError) throw updateError;
+
       await onAcceptOffer(offer);
     } catch (error: any) {
       if (error?.message?.includes('refresh_token_not_found')) {
@@ -67,11 +75,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         title: "Error",
         description: "Failed to accept offer. Please try again.",
         variant: "destructive",
-      });
-      setAcceptedOffers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(offer.id);
-        return newSet;
       });
     }
   };
@@ -92,7 +95,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
             key={offer.id}
             offer={offer}
             currentUserId={currentUserId}
-            isAccepted={acceptedOffers.has(offer.id)}
+            isAccepted={offer.status === 'in_progress'}
             onDelete={handleDelete}
             onConfirm={handleConfirmOffer}
             onReject={handleRejectOffer}
