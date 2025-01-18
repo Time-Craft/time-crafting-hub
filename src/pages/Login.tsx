@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AuthError } from '@supabase/supabase-js';
+import { AuthError, AuthApiError } from '@supabase/supabase-js';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -15,18 +15,32 @@ const Login = () => {
   useEffect(() => {
     const cleanupSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        // First check if there's an existing session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          if (!sessionError.message.includes('session_not_found')) {
+            console.error('Session check error:', sessionError);
+          }
+          return;
+        }
+
+        // If there's a session, try to sign out
         if (session) {
-          const { error: signOutError } = await supabase.auth.signOut();
+          const { error: signOutError } = await supabase.auth.signOut({
+            scope: 'local' // Use local scope to avoid refresh token issues
+          });
+          
           if (signOutError) {
-            // Only log non-session_not_found errors as they're expected during cleanup
-            if (!signOutError.message.includes('session_not_found')) {
+            // Only log non-session_not_found errors
+            if (!signOutError.message.includes('session_not_found') && 
+                !signOutError.message.includes('refresh_token_not_found')) {
               console.error('Error during session cleanup:', signOutError);
             }
           }
         }
       } catch (error) {
-        // Ignore cleanup errors as they're not critical for login flow
+        // Ignore cleanup errors as they're not critical
         console.error('Unexpected error during session cleanup:', error);
       }
     };
@@ -34,12 +48,15 @@ const Login = () => {
     const checkSession = async () => {
       try {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
         if (sessionError) {
-          if (!sessionError.message.includes('session_not_found')) {
+          if (!sessionError.message.includes('session_not_found') && 
+              !sessionError.message.includes('refresh_token_not_found')) {
             handleAuthError(sessionError);
           }
           return;
         }
+
         if (session) {
           handleSuccessfulAuth(session);
         }
@@ -59,9 +76,17 @@ const Login = () => {
         }
       } else if (event === 'SIGNED_OUT') {
         setError(null);
+        navigate('/login', { replace: true });
       } else if (event === 'TOKEN_REFRESHED') {
         if (session) {
           handleSuccessfulAuth(session);
+        }
+      } else if (event === 'USER_UPDATED') {
+        const { error } = await supabase.auth.getSession();
+        if (error) {
+          if (!error.message.includes('refresh_token_not_found')) {
+            setError(getErrorMessage(error));
+          }
         }
       }
     });
@@ -103,6 +128,26 @@ const Login = () => {
     }
   };
 
+  const getErrorMessage = (error: AuthError) => {
+    if (error instanceof AuthApiError) {
+      switch (error.code) {
+        case 'invalid_credentials':
+          return 'Invalid email or password. Please check your credentials.';
+        case 'email_not_confirmed':
+          return 'Please verify your email address before signing in.';
+        case 'user_not_found':
+          return 'No user found with these credentials.';
+        case 'invalid_grant':
+          return 'Invalid login credentials.';
+        case 'refresh_token_not_found':
+          return 'Your session has expired. Please sign in again.';
+        default:
+          return error.message;
+      }
+    }
+    return error.message;
+  };
+
   const handleAuthError = (error: AuthError) => {
     let errorMessage = 'An error occurred during authentication.';
     
@@ -116,7 +161,7 @@ const Login = () => {
                error.message.includes('session_not_found')) {
       errorMessage = 'Your session has expired. Please sign in again.';
       // Force a new sign in when refresh token is invalid
-      supabase.auth.signOut();
+      supabase.auth.signOut({ scope: 'local' });
     }
     
     setError(errorMessage);
