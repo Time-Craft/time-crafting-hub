@@ -13,7 +13,84 @@ const Home = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Fetch pending offers that need confirmation
+  // Fetch user's time balance
+  const { data: timeBalance } = useQuery({
+    queryKey: ['time-balance'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        navigate('/login', { replace: true });
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        if (error.message.includes('refresh_token_not_found') || 
+            error.message.includes('session_not_found')) {
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          navigate('/login', { replace: true });
+          return null;
+        }
+        throw error;
+      }
+
+      return data?.balance || 0;
+    }
+  });
+
+  // Fetch user's transaction statistics
+  const { data: stats } = useQuery({
+    queryKey: ['transaction-stats'],
+    queryFn: async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return null;
+
+      const { data: transactions, error } = await supabase
+        .from('time_transactions')
+        .select('*')
+        .or(`user_id.eq.${session.user.id},recipient_id.eq.${session.user.id}`);
+
+      if (error) {
+        if (error.message.includes('refresh_token_not_found') || 
+            error.message.includes('session_not_found')) {
+          toast({
+            title: "Session Expired",
+            description: "Please sign in again to continue.",
+            variant: "destructive",
+          });
+          await supabase.auth.signOut();
+          navigate('/login', { replace: true });
+          return null;
+        }
+        throw error;
+      }
+
+      return {
+        activeServices: transactions?.filter(t => t.status === 'in_progress').length || 0,
+        upcomingSessions: transactions?.filter(t => t.status === 'accepted').length || 0,
+        completedExchanges: transactions?.filter(t => 
+          t.status !== 'open' && t.status !== 'in_progress'
+        ).length || 0,
+        earnedHours: transactions
+          ?.filter(t => t.type === 'earned' && t.user_id === session.user.id)
+          .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
+        spentHours: transactions
+          ?.filter(t => t.type === 'spent' && t.user_id === session.user.id)
+          .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
+      };
+    }
+  });
+
   const { data: pendingOffers, refetch: refetchPendingOffers } = useQuery({
     queryKey: ['pending-offers'],
     queryFn: async () => {
@@ -179,15 +256,12 @@ const Home = () => {
     checkAuth();
   }, [navigate, toast]);
 
-  // ... keep existing code (JSX for the component layout)
-
   return (
     <div className="min-h-screen bg-white pb-20">
-      {/* Header Section */}
       <header className="bg-primary/5 p-6">
         <div className="max-w-lg mx-auto">
           <h1 className="text-2xl font-semibold text-gray-900">Welcome back, {username}</h1>
-          <p className="text-gray-600 mt-1">Current Status: Available</p>
+          <p className="text-gray-600 mt-1">Balance: {timeBalance || 0} hours</p>
         </div>
       </header>
 
@@ -235,7 +309,6 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Time Balance Section */}
       <section className="p-6">
         <div className="max-w-lg mx-auto">
           <div className="grid grid-cols-2 gap-4">
@@ -245,7 +318,7 @@ const Home = () => {
                   <ArrowUpRight className="text-primary" />
                   <span className="text-sm text-gray-600">Time Earned</span>
                 </div>
-                <p className="text-2xl font-semibold mt-2">12.5 hrs</p>
+                <p className="text-2xl font-semibold mt-2">{stats?.earnedHours || 0} hrs</p>
               </CardContent>
             </Card>
             <Card className="bg-secondary">
@@ -254,14 +327,13 @@ const Home = () => {
                   <ArrowDownRight className="text-primary" />
                   <span className="text-sm text-gray-600">Time Spent</span>
                 </div>
-                <p className="text-2xl font-semibold mt-2">8.0 hrs</p>
+                <p className="text-2xl font-semibold mt-2">{stats?.spentHours || 0} hrs</p>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Quick Stats Section */}
       <section className="p-6 pt-0">
         <div className="max-w-lg mx-auto">
           <Card>
@@ -275,21 +347,21 @@ const Home = () => {
                     <Clock className="text-primary" />
                     <span>Active Services</span>
                   </div>
-                  <span className="font-semibold">3</span>
+                  <span className="font-semibold">{stats?.activeServices || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Calendar className="text-primary" />
                     <span>Upcoming Sessions</span>
                   </div>
-                  <span className="font-semibold">2</span>
+                  <span className="font-semibold">{stats?.upcomingSessions || 0}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <Trophy className="text-primary" />
                     <span>Completed Exchanges</span>
                   </div>
-                  <span className="font-semibold">15</span>
+                  <span className="font-semibold">{stats?.completedExchanges || 0}</span>
                 </div>
               </div>
             </CardContent>
