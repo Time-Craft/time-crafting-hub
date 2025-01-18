@@ -7,19 +7,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { TimeTransaction } from "@/types/explore";
+import { useSession } from "@supabase/auth-helpers-react";
 
 const Home = () => {
   const [username, setUsername] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const session = useSession();
 
   // Fetch user's time balance with real-time updates
   const { data: timeBalance } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
+      if (!session?.user?.id) {
         navigate('/login', { replace: true });
         return null;
       }
@@ -46,12 +47,12 @@ const Home = () => {
       }
 
       return data?.balance || 0;
-    }
+    },
+    enabled: !!session?.user?.id
   });
 
   // Set up real-time subscription for balance updates
   useEffect(() => {
-    const { data: { session } } = supabase.auth.getSession();
     if (!session?.user?.id) return;
 
     const channel = supabase
@@ -74,14 +75,13 @@ const Home = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, session?.user?.id]);
 
   // Fetch user's transaction statistics with real-time updates
   const { data: stats } = useQuery({
     queryKey: ['transaction-stats'],
     queryFn: async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return null;
+      if (!session?.user?.id) return null;
 
       const { data: transactions, error } = await supabase
         .from('time_transactions')
@@ -126,12 +126,12 @@ const Home = () => {
           )
           .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
       };
-    }
+    },
+    enabled: !!session?.user?.id
   });
 
   // Set up real-time subscription for transaction updates
   useEffect(() => {
-    const { data: { session } } = supabase.auth.getSession();
     if (!session?.user?.id) return;
 
     const channel = supabase
@@ -155,145 +155,17 @@ const Home = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, session?.user?.id]);
 
-  const { data: pendingOffers, refetch: refetchPendingOffers } = useQuery({
-    queryKey: ['pending-offers'],
-    queryFn: async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          navigate('/login', { replace: true });
-          return [];
-        }
-
-        const { data, error } = await supabase
-          .from('time_transactions')
-          .select(`
-            *,
-            profiles:user_id (
-              username,
-              avatar_url
-            )
-          `)
-          .eq('user_id', session.user.id)
-          .eq('status', 'in_progress')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          if (error.message.includes('refresh_token_not_found') || 
-              error.message.includes('session_not_found')) {
-            toast({
-              title: "Session Expired",
-              description: "Please sign in again to continue.",
-              variant: "destructive",
-            });
-            await supabase.auth.signOut();
-            navigate('/login', { replace: true });
-            return [];
-          }
-          throw error;
-        }
-        return data as TimeTransaction[];
-      } catch (error: any) {
-        console.error('Error fetching pending offers:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load pending offers. Please try again.",
-          variant: "destructive",
-        });
-        return [];
-      }
-    }
-  });
-
-  const handleConfirmOffer = async (offer: TimeTransaction) => {
-    try {
-      const now = new Date().toISOString();
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ 
-          status: 'accepted',
-          completed_at: now
-        })
-        .eq('id', offer.id);
-
-      if (error) {
-        if (error.message.includes('refresh_token_not_found') || 
-            error.message.includes('session_not_found')) {
-          toast({
-            title: "Session Expired",
-            description: "Please sign in again to continue.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          navigate('/login', { replace: true });
-          return;
-        }
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Offer confirmed and completed successfully",
-      });
-      refetchPendingOffers();
-    } catch (error: any) {
-      console.error('Error confirming offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to confirm offer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleDeclineOffer = async (offer: TimeTransaction) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ status: 'declined' })
-        .eq('id', offer.id);
-
-      if (error) {
-        if (error.message.includes('refresh_token_not_found') || 
-            error.message.includes('session_not_found')) {
-          toast({
-            title: "Session Expired",
-            description: "Please sign in again to continue.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          navigate('/login', { replace: true });
-          return;
-        }
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Offer declined successfully",
-      });
-      refetchPendingOffers();
-    } catch (error: any) {
-      console.error('Error declining offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to decline offer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
+  // Load user profile
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError || !session) {
-          navigate('/login', { replace: true });
-          return;
-        }
+    const loadProfile = async () => {
+      if (!session?.user?.id) {
+        navigate('/login', { replace: true });
+        return;
+      }
 
+      try {
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('username')
@@ -317,14 +189,14 @@ const Home = () => {
 
         setUsername(profile?.username || session.user.email?.split('@')[0] || 'User');
       } catch (error: any) {
-        console.error('Auth check error:', error);
+        console.error('Profile loading error:', error);
         await supabase.auth.signOut();
         navigate('/login', { replace: true });
       }
     };
 
-    checkAuth();
-  }, [navigate, toast]);
+    loadProfile();
+  }, [navigate, session?.user, toast]);
 
   return (
     <div className="min-h-screen bg-white pb-20">
