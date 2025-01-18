@@ -1,6 +1,7 @@
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimeTransaction } from "@/types/explore";
+import { useState } from "react";
 
 interface OfferActionsProps {
   offer: TimeTransaction;
@@ -19,14 +20,26 @@ export const OfferActions = ({
   onReject,
   onAccept,
 }: OfferActionsProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleAcceptClick = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onAccept(offer);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (currentUserId !== offer.user_id && offer.status === 'open') {
     return (
       <Button 
         className="mt-4"
-        onClick={() => onAccept(offer)}
-        disabled={isAccepted}
+        onClick={handleAcceptClick}
+        disabled={isAccepted || isSubmitting}
       >
-        {isAccepted ? 'Pending Offer' : 'Accept Offer'}
+        {isAccepted ? 'Pending Request' : 'Accept Offer'}
       </Button>
     );
   }
