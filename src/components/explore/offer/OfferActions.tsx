@@ -32,34 +32,35 @@ export const OfferActions = ({
     }
   };
 
+  // Show accept button only if user is not the owner and offer is open
   if (currentUserId !== offer.user_id && offer.status === 'open') {
     return (
       <Button 
-        className="mt-4"
+        className="w-full mt-4"
         onClick={handleAcceptClick}
-        disabled={isAccepted || isSubmitting}
+        disabled={isSubmitting}
       >
         {isAccepted ? 'Pending Request' : 'Accept Offer'}
       </Button>
     );
   }
 
+  // Show confirm/reject buttons only if user is the owner and offer is in progress
   if (currentUserId === offer.user_id && offer.status === 'in_progress') {
     return (
       <div className="mt-4 flex gap-2">
         <Button
           onClick={() => onConfirm(offer.id)}
-          className="bg-green-500 hover:bg-green-600"
-          size="sm"
+          className="flex-1 bg-green-500 hover:bg-green-600"
         >
-          <Check className="h-4 w-4 mr-1" /> Confirm
+          <Check className="mr-2 h-4 w-4" /> Confirm
         </Button>
         <Button
           onClick={() => onReject(offer.id)}
           variant="destructive"
-          size="sm"
+          className="flex-1"
         >
-          <X className="h-4 w-4 mr-1" /> Reject
+          <X className="mr-2 h-4 w-4" /> Reject
         </Button>
       </div>
     );

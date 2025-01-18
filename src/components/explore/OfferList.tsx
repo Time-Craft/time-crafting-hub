@@ -1,7 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { TimeTransaction } from "@/types/explore";
-import { useState } from "react";
-import { useOfferRealtime } from "@/hooks/useOfferRealtime";
 import { useOfferManagement } from "@/hooks/useOfferManagement";
 import { OfferCard } from "./OfferCard";
 import { useNavigate } from "react-router-dom";
@@ -61,6 +59,11 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
       if (updateError) throw updateError;
 
       await onAcceptOffer(offer);
+      
+      toast({
+        title: "Success",
+        description: "Offer accepted successfully. Waiting for confirmation.",
+      });
     } catch (error: any) {
       if (error?.message?.includes('refresh_token_not_found')) {
         toast({
@@ -95,7 +98,6 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
             key={offer.id}
             offer={offer}
             currentUserId={currentUserId}
-            isAccepted={offer.status === 'in_progress'}
             onDelete={handleDelete}
             onConfirm={handleConfirmOffer}
             onReject={handleRejectOffer}
