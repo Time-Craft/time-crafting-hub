@@ -51,31 +51,81 @@ const Home = () => {
     enabled: !!session?.user?.id
   });
 
-  // Set up real-time subscription for balance updates
-  useEffect(() => {
-    if (!session?.user?.id) return;
+  // Fetch pending offers that need confirmation
+  const { data: pendingOffers } = useQuery({
+    queryKey: ['pending-offers'],
+    queryFn: async () => {
+      if (!session?.user?.id) return [];
 
-    const channel = supabase
-      .channel('time_balances_changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'time_balances',
-          filter: `id=eq.${session.user.id}`
-        },
-        (payload) => {
-          console.log('Balance update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['time-balance'] });
-        }
-      )
-      .subscribe();
+      const { data, error } = await supabase
+        .from('time_transactions')
+        .select('*')
+        .eq('user_id', session.user.id)
+        .eq('status', 'in_progress');
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient, session?.user?.id]);
+      if (error) throw error;
+      return data as TimeTransaction[];
+    },
+    enabled: !!session?.user?.id
+  });
+
+  // Handle offer confirmation
+  const handleConfirmOffer = async (offer: TimeTransaction) => {
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ 
+          status: 'accepted',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', offer.id)
+        .eq('user_id', session?.user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer confirmed successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
+    } catch (error) {
+      console.error('Error confirming offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to confirm offer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Handle offer rejection
+  const handleDeclineOffer = async (offer: TimeTransaction) => {
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({ status: 'declined' })
+        .eq('id', offer.id)
+        .eq('user_id', session?.user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer declined successfully",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+    } catch (error) {
+      console.error('Error declining offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to decline offer",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Fetch user's transaction statistics with real-time updates
   const { data: stats } = useQuery({
