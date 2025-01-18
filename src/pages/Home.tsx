@@ -4,7 +4,7 @@ import BottomNav from "@/components/BottomNav";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { TimeTransaction } from "@/types/explore";
 
@@ -12,8 +12,9 @@ const Home = () => {
   const [username, setUsername] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Fetch user's time balance
+  // Fetch user's time balance with real-time updates
   const { data: timeBalance } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
@@ -48,7 +49,34 @@ const Home = () => {
     }
   });
 
-  // Fetch user's transaction statistics
+  // Set up real-time subscription for balance updates
+  useEffect(() => {
+    const { data: { session } } = supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const channel = supabase
+      .channel('time_balances_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_balances',
+          filter: `id=eq.${session.user.id}`
+        },
+        (payload) => {
+          console.log('Balance update:', payload);
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
+  // Fetch user's transaction statistics with real-time updates
   const { data: stats } = useQuery({
     queryKey: ['transaction-stats'],
     queryFn: async () => {
@@ -77,19 +105,57 @@ const Home = () => {
 
       return {
         activeServices: transactions?.filter(t => t.status === 'in_progress').length || 0,
-        upcomingSessions: transactions?.filter(t => t.status === 'accepted').length || 0,
+        upcomingSessions: transactions?.filter(t => t.status === 'accepted' && !t.completed_at).length || 0,
         completedExchanges: transactions?.filter(t => 
-          t.status !== 'open' && t.status !== 'in_progress'
+          t.status === 'accepted' && t.completed_at
         ).length || 0,
         earnedHours: transactions
-          ?.filter(t => t.type === 'earned' && t.user_id === session.user.id)
+          ?.filter(t => 
+            t.type === 'earned' && 
+            t.status === 'accepted' && 
+            t.completed_at && 
+            t.user_id === session.user.id
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
         spentHours: transactions
-          ?.filter(t => t.type === 'spent' && t.user_id === session.user.id)
+          ?.filter(t => 
+            t.type === 'spent' && 
+            t.status === 'accepted' && 
+            t.completed_at && 
+            t.user_id === session.user.id
+          )
           .reduce((sum, t) => sum + Number(t.amount), 0) || 0,
       };
     }
   });
+
+  // Set up real-time subscription for transaction updates
+  useEffect(() => {
+    const { data: { session } } = supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const channel = supabase
+      .channel('time_transactions_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_transactions',
+          filter: `or(user_id.eq.${session.user.id},recipient_id.eq.${session.user.id})`
+        },
+        (payload) => {
+          console.log('Transaction update:', payload);
+          queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: pendingOffers, refetch: refetchPendingOffers } = useQuery({
     queryKey: ['pending-offers'],
@@ -143,9 +209,13 @@ const Home = () => {
 
   const handleConfirmOffer = async (offer: TimeTransaction) => {
     try {
+      const now = new Date().toISOString();
       const { error } = await supabase
         .from('time_transactions')
-        .update({ status: 'accepted' })
+        .update({ 
+          status: 'accepted',
+          completed_at: now
+        })
         .eq('id', offer.id);
 
       if (error) {
@@ -165,7 +235,7 @@ const Home = () => {
 
       toast({
         title: "Success",
-        description: "Offer confirmed successfully",
+        description: "Offer confirmed and completed successfully",
       });
       refetchPendingOffers();
     } catch (error: any) {
@@ -265,7 +335,7 @@ const Home = () => {
         </div>
       </header>
 
-      {/* Pending Offers Section - Moved to top for visibility */}
+      {/* Pending Offers Section */}
       <section className="p-6">
         <div className="max-w-lg mx-auto">
           <Card>
@@ -291,7 +361,7 @@ const Home = () => {
                           onClick={() => handleConfirmOffer(offer)}
                           className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
                         >
-                          Confirm
+                          Complete & Confirm
                         </button>
                         <button
                           onClick={() => handleDeclineOffer(offer)}
@@ -309,6 +379,7 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Stats Section */}
       <section className="p-6">
         <div className="max-w-lg mx-auto">
           <div className="grid grid-cols-2 gap-4">
@@ -334,6 +405,7 @@ const Home = () => {
         </div>
       </section>
 
+      {/* Quick Stats Section */}
       <section className="p-6 pt-0">
         <div className="max-w-lg mx-auto">
           <Card>

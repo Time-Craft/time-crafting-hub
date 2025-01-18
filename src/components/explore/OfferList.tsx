@@ -6,6 +6,7 @@ import { useOfferManagement } from "@/hooks/useOfferManagement";
 import { OfferCard } from "./OfferCard";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OfferListProps {
   offers: TimeTransaction[] | null;
@@ -22,11 +23,37 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
   useOfferRealtime(setAcceptedOffers);
 
   const handleAcceptClick = async (offer: TimeTransaction) => {
+    if (!currentUserId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to accept offers",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
+      // Check user's balance before accepting
+      const { data: balance, error: balanceError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('id', currentUserId)
+        .single();
+
+      if (balanceError) throw balanceError;
+
+      if (!balance || balance.balance < offer.amount) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You need ${offer.amount} hours to accept this offer. Your current balance is ${balance?.balance || 0} hours.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       setAcceptedOffers(prev => new Set([...prev, offer.id]));
       await onAcceptOffer(offer);
     } catch (error: any) {
-      // Check specifically for refresh token errors
       if (error?.message?.includes('refresh_token_not_found')) {
         toast({
           title: "Session Expired",
@@ -36,13 +63,11 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
         navigate('/login', { replace: true });
         return;
       }
-      // Handle other errors
       toast({
         title: "Error",
         description: "Failed to accept offer. Please try again.",
         variant: "destructive",
       });
-      // Remove from accepted offers if there was an error
       setAcceptedOffers(prev => {
         const newSet = new Set(prev);
         newSet.delete(offer.id);
