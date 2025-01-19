@@ -1,4 +1,4 @@
-import { Clock, Calendar, ArrowUpRight, ArrowDownRight, Trophy } from "lucide-react";
+import { Clock, Calendar, ArrowUpRight, ArrowDownRight, Trophy, Check, X } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import BottomNav from "@/components/BottomNav";
 import { useEffect, useState } from "react";
@@ -8,6 +8,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import type { TimeTransaction } from "@/types/explore";
 import { useSession } from "@supabase/auth-helpers-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 const Home = () => {
   const [username, setUsername] = useState('');
@@ -61,7 +63,7 @@ const Home = () => {
         .from('time_transactions')
         .select(`
           *,
-          profiles:user_id (
+          profiles:recipient_id (
             username,
             avatar_url
           )
@@ -91,7 +93,7 @@ const Home = () => {
 
       toast({
         title: "Success",
-        description: "Offer confirmed successfully",
+        description: "Service completed and confirmed successfully",
       });
 
       queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
@@ -268,7 +270,7 @@ const Home = () => {
         <div className="max-w-lg mx-auto">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Pending Offers</CardTitle>
+              <CardTitle className="text-lg">Pending Confirmations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -276,27 +278,39 @@ const Home = () => {
                   <p className="text-gray-500 text-center">No pending offers to confirm</p>
                 ) : (
                   pendingOffers?.map((offer) => (
-                    <div key={offer.id} className="border rounded-lg p-4">
+                    <div key={offer.id} className="border rounded-lg p-4 bg-white shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <h3 className="font-medium">{offer.service_type}</h3>
+                        <div className="space-y-1">
+                          <h3 className="font-medium text-gray-900">{offer.service_type}</h3>
                           <p className="text-sm text-gray-600">{offer.description}</p>
-                          <p className="text-sm font-medium mt-1">{offer.amount} hours</p>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Clock className="h-4 w-4 text-gray-500" />
+                            <span className="text-sm font-medium text-gray-700">{offer.amount} hours</span>
+                            <Badge variant="secondary" className="ml-2">
+                              Pending
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-500 mt-2">
+                            Requested by: {offer.profiles?.username || 'Anonymous'}
+                          </p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
+                      <div className="flex gap-3 mt-4">
+                        <Button
                           onClick={() => handleConfirmOffer(offer)}
-                          className="bg-primary text-white px-4 py-2 rounded hover:bg-primary/90"
+                          className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                         >
+                          <Check className="mr-2 h-5 w-5" />
                           Complete & Confirm
-                        </button>
-                        <button
+                        </Button>
+                        <Button
                           onClick={() => handleDeclineOffer(offer)}
-                          className="bg-destructive text-white px-4 py-2 rounded hover:bg-destructive/90"
+                          variant="destructive"
+                          className="flex-1"
                         >
+                          <X className="mr-2 h-5 w-5" />
                           Decline
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))
