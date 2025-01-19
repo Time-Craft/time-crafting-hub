@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Handshake, Clock, Calendar, MapPin } from "lucide-react";
+import { Handshake, Clock, Calendar, MapPin, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@supabase/auth-helpers-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface OfferFormProps {
   onOfferCreated: () => void;
@@ -19,33 +20,66 @@ export const OfferForm = ({ onOfferCreated }: OfferFormProps) => {
   const [duration, setDuration] = useState("");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const session = useSession();
+
+  const validateForm = () => {
+    const finalServiceType = serviceType === "other" ? customService : serviceType;
+    
+    if (!finalServiceType) {
+      setError("Please select a service type");
+      return false;
+    }
+    if (!description) {
+      setError("Please provide a description of your service");
+      return false;
+    }
+    if (!duration || Number(duration) <= 0) {
+      setError("Please enter a valid duration (greater than 0)");
+      return false;
+    }
+    if (!location) {
+      setError("Please provide a location");
+      return false;
+    }
+    if (!date) {
+      setError("Please select an availability date");
+      return false;
+    }
+
+    setError(null);
+    return true;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const finalServiceType = serviceType === "other" ? customService : serviceType;
-    
-    if (!finalServiceType || !description || !duration || !location || !date) {
+    if (!session?.user?.id) {
       toast({
         title: "Error",
-        description: "Please fill in all fields before creating an offer.",
+        description: "You must be logged in to create an offer.",
         variant: "destructive",
       });
       return;
     }
 
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+    const finalServiceType = serviceType === "other" ? customService : serviceType;
+    
     try {
-      // Create a time transaction for the offer
       const { error: transactionError } = await supabase
         .from('time_transactions')
         .insert({
-          user_id: session?.user.id,
+          user_id: session.user.id,
           type: 'earned',
           amount: Number(duration),
           description,
           service_type: finalServiceType,
+          status: 'open',
         });
 
       if (transactionError) throw transactionError;
@@ -57,25 +91,35 @@ export const OfferForm = ({ onOfferCreated }: OfferFormProps) => {
       setDuration("");
       setLocation("");
       setDate("");
+      setError(null);
 
       toast({
         title: "Success!",
-        description: "Your service offer has been created and time credits added.",
+        description: "Your service offer has been created.",
       });
 
       onOfferCreated();
     } catch (error) {
+      console.error('Error creating offer:', error);
       toast({
         title: "Error",
         description: "Failed to create the offer. Please try again.",
         variant: "destructive",
       });
-      console.error('Error creating offer:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-2">
         <label className="text-sm font-medium">Service Type</label>
         <Select value={serviceType} onValueChange={setServiceType} required>
@@ -130,7 +174,8 @@ export const OfferForm = ({ onOfferCreated }: OfferFormProps) => {
           </label>
           <Input 
             type="number" 
-            min="1" 
+            min="0.5"
+            step="0.5"
             placeholder="2"
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
@@ -160,13 +205,14 @@ export const OfferForm = ({ onOfferCreated }: OfferFormProps) => {
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
+          min={new Date().toISOString().split('T')[0]}
           required
         />
       </div>
 
-      <Button type="submit" className="w-full">
+      <Button type="submit" className="w-full" disabled={isSubmitting}>
         <Handshake className="mr-2" />
-        Create Offer
+        {isSubmitting ? "Creating Offer..." : "Create Offer"}
       </Button>
     </form>
   );
