@@ -63,12 +63,12 @@ const Home = () => {
         .from('time_transactions')
         .select(`
           *,
-          profiles:recipient_id (
+          profiles:user_id (
             username,
             avatar_url
           )
         `)
-        .eq('user_id', session.user.id)
+        .eq('recipient_id', session.user.id)
         .eq('status', 'in_progress');
 
       if (error) throw error;
