@@ -10,11 +10,12 @@ export interface TimeTransaction {
   user_id: string;
   type: 'earned' | 'spent';
   amount: number;
-  description: string;
+  description: string | null;
   service_type: string;
   created_at: string;
   recipient_id: string | null;
   status: 'open' | 'in_progress' | 'accepted' | 'declined';
+  completed_at: string | null;
   profiles: {
     username: string | null;
     avatar_url: string | null;
