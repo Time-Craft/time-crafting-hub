@@ -19,12 +19,12 @@ const Home = () => {
   const session = useSession();
 
   // Fetch user's time balance with real-time updates
-  const { data: timeBalance } = useQuery({
+  const { data: timeBalance = 30 } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
       if (!session?.user?.id) {
         navigate('/login', { replace: true });
-        return null;
+        return 30; // Default to 30 if not logged in
       }
 
       const { data, error } = await supabase
@@ -43,12 +43,12 @@ const Home = () => {
           });
           await supabase.auth.signOut();
           navigate('/login', { replace: true });
-          return null;
+          return 30;
         }
         throw error;
       }
 
-      return data?.balance || 0;
+      return data?.balance || 30;
     },
     enabled: !!session?.user?.id
   });
