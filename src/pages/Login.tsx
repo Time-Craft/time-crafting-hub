@@ -76,8 +76,8 @@ const Login = () => {
       setError(null);
 
       if (isSignUp) {
-        const { data } = await signUp(email, password);
-        if (data.user) {
+        const response = await signUp(email, password);
+        if (response.user) {
           toast({
             title: "Account created!",
             description: "Please check your email to verify your account.",
