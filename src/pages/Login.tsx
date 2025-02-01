@@ -20,7 +20,7 @@ const Login = () => {
           .from('profiles')
           .select('username')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle();
 
         if (profile?.username) {
           navigate('/home');
@@ -42,7 +42,7 @@ const Login = () => {
                 .from('profiles')
                 .select('username')
                 .eq('id', session.user.id)
-                .single();
+                .maybeSingle();
 
               toast({
                 title: "Welcome to TimeCraft!",
