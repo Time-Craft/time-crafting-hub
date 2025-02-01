@@ -34,6 +34,8 @@ export const AuthForm = ({ onSubmit, isLoading, error, buttonText }: AuthFormPro
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          disabled={isLoading}
+          className="w-full"
         />
       </div>
       
@@ -44,6 +46,8 @@ export const AuthForm = ({ onSubmit, isLoading, error, buttonText }: AuthFormPro
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          disabled={isLoading}
+          className="w-full"
         />
       </div>
       

@@ -33,18 +33,19 @@ export const getErrorMessage = (error: AuthError) => {
   if (error instanceof AuthApiError) {
     switch (error.status) {
       case 400:
+        if (error.message.includes('Email not confirmed')) {
+          return 'Please check your email to confirm your account before signing in.';
+        }
+        if (error.message.includes('Invalid login credentials')) {
+          return 'Invalid email or password. Please check your credentials and try again.';
+        }
         if (error.message.includes('already registered')) {
           return 'This email is already registered. Please sign in instead.';
-        } else if (error.message.includes('invalid_credentials')) {
-          return 'Invalid email or password. Please check your credentials and try again.';
         }
         return 'Please check your email and password.';
       case 422:
         return 'Please enter a valid email address.';
       case 500:
-        if (error.message.includes('Database error')) {
-          return 'There was an issue with your account creation. Please try again in a few moments.';
-        }
         return 'An unexpected error occurred. Please try again later.';
       default:
         return error.message;
