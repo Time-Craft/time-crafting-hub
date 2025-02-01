@@ -172,6 +172,8 @@ const Login = () => {
         case 400:
           if (error.message.includes('already registered')) {
             return 'This email is already registered. Please sign in instead.';
+          } else if (error.message.includes('invalid_credentials')) {
+            return 'Invalid email or password. Please check your credentials and try again.';
           }
           return 'Invalid email or password. Please check your credentials.';
         case 422:
