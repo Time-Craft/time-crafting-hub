@@ -76,12 +76,14 @@ const Login = () => {
       setError(null);
 
       if (isSignUp) {
-        await signUp(email, password);
-        toast({
-          title: "Account created!",
-          description: "Please check your email to verify your account.",
-          duration: 5000,
-        });
+        const { data } = await signUp(email, password);
+        if (data.user) {
+          toast({
+            title: "Account created!",
+            description: "Please check your email to verify your account.",
+            duration: 5000,
+          });
+        }
       } else {
         await signIn(email, password);
       }

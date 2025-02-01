@@ -16,7 +16,10 @@ export const signUp = async (email: string, password: string) => {
     email,
     password,
     options: {
-      emailRedirectTo: window.location.origin,
+      emailRedirectTo: `${window.location.origin}/login`,
+      data: {
+        email: email,
+      }
     }
   });
   
@@ -43,6 +46,11 @@ export const getErrorMessage = (error: AuthError) => {
         return 'Please enter a valid email address.';
       case 401:
         return 'Invalid credentials. Please check your email and password.';
+      case 500:
+        if (error.message.includes('Database error')) {
+          return 'There was an issue creating your account. Please try again later.';
+        }
+        return 'An unexpected error occurred. Please try again later.';
       default:
         return error.message;
     }
