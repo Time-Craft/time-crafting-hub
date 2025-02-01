@@ -15,7 +15,6 @@ const Login = () => {
   useEffect(() => {
     const cleanupSession = async () => {
       try {
-        // First check if there's an existing session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
@@ -25,14 +24,12 @@ const Login = () => {
           return;
         }
 
-        // If there's a session, try to sign out
         if (session) {
           const { error: signOutError } = await supabase.auth.signOut({
-            scope: 'local' // Use local scope to avoid refresh token issues
+            scope: 'local'
           });
           
           if (signOutError) {
-            // Only log non-session_not_found errors
             if (!signOutError.message.includes('session_not_found') && 
                 !signOutError.message.includes('refresh_token_not_found')) {
               console.error('Error during session cleanup:', signOutError);
@@ -40,7 +37,6 @@ const Login = () => {
           }
         }
       } catch (error) {
-        // Ignore cleanup errors as they're not critical
         console.error('Unexpected error during session cleanup:', error);
       }
     };
@@ -50,14 +46,37 @@ const Login = () => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
-          if (!sessionError.message.includes('session_not_found') && 
-              !sessionError.message.includes('refresh_token_not_found')) {
+          if (!sessionError.message.includes('session_not_found')) {
             handleAuthError(sessionError);
           }
           return;
         }
 
         if (session) {
+          // Check if profile exists
+          const { data: profile, error: profileError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', session.user.id)
+            .single();
+
+          if (profileError) {
+            console.error('Profile check error:', profileError);
+            return;
+          }
+
+          // Check if time balance exists
+          const { data: balance, error: balanceError } = await supabase
+            .from('time_balances')
+            .select('balance')
+            .eq('id', session.user.id)
+            .single();
+
+          if (balanceError) {
+            console.error('Balance check error:', balanceError);
+            return;
+          }
+
           handleSuccessfulAuth(session);
         }
       } catch (error) {
@@ -66,28 +85,47 @@ const Login = () => {
       }
     };
 
-    // Clean up any existing session first, then check for current session
     cleanupSession().then(() => checkSession());
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         if (session) {
-          handleSuccessfulAuth(session);
+          // Wait briefly to allow triggers to complete
+          setTimeout(async () => {
+            try {
+              // Verify profile creation
+              const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', session.user.id)
+                .single();
+
+              if (profileError) {
+                throw new Error('Profile creation failed');
+              }
+
+              // Verify time balance creation
+              const { data: balance, error: balanceError } = await supabase
+                .from('time_balances')
+                .select('balance')
+                .eq('id', session.user.id)
+                .single();
+
+              if (balanceError) {
+                throw new Error('Time balance initialization failed');
+              }
+
+              handleSuccessfulAuth(session);
+            } catch (error) {
+              console.error('Verification error:', error);
+              setError('Account setup failed. Please try again.');
+              await supabase.auth.signOut();
+            }
+          }, 1000); // Wait 1 second for triggers to complete
         }
       } else if (event === 'SIGNED_OUT') {
         setError(null);
         navigate('/login', { replace: true });
-      } else if (event === 'TOKEN_REFRESHED') {
-        if (session) {
-          handleSuccessfulAuth(session);
-        }
-      } else if (event === 'USER_UPDATED') {
-        const { error } = await supabase.auth.getSession();
-        if (error) {
-          if (!error.message.includes('refresh_token_not_found')) {
-            setError(getErrorMessage(error));
-          }
-        }
       }
     });
 
@@ -112,8 +150,8 @@ const Login = () => {
       }
 
       toast({
-        title: "Welcome back!",
-        description: "Successfully logged in to TimeCraft",
+        title: "Welcome to TimeCraft!",
+        description: profile?.username ? "Successfully logged in" : "Let's set up your profile",
         duration: 2000,
       });
 
@@ -130,17 +168,16 @@ const Login = () => {
 
   const getErrorMessage = (error: AuthError) => {
     if (error instanceof AuthApiError) {
-      switch (error.code) {
-        case 'invalid_credentials':
+      switch (error.status) {
+        case 400:
+          if (error.message.includes('already registered')) {
+            return 'This email is already registered. Please sign in instead.';
+          }
           return 'Invalid email or password. Please check your credentials.';
-        case 'email_not_confirmed':
-          return 'Please verify your email address before signing in.';
-        case 'user_not_found':
-          return 'No user found with these credentials.';
-        case 'invalid_grant':
-          return 'Invalid login credentials.';
-        case 'refresh_token_not_found':
-          return 'Your session has expired. Please sign in again.';
+        case 422:
+          return 'Invalid email format. Please enter a valid email address.';
+        case 401:
+          return 'Invalid credentials. Please check your email and password.';
         default:
           return error.message;
       }
@@ -149,21 +186,7 @@ const Login = () => {
   };
 
   const handleAuthError = (error: AuthError) => {
-    let errorMessage = 'An error occurred during authentication.';
-    
-    if (error.message.includes('invalid_credentials')) {
-      errorMessage = 'Invalid email or password. Please check your credentials.';
-    } else if (error.message.includes('user_already_exists')) {
-      errorMessage = 'This email is already registered. Please sign in instead.';
-    } else if (error.message.includes('email_not_confirmed')) {
-      errorMessage = 'Please verify your email address before signing in.';
-    } else if (error.message.includes('refresh_token_not_found') || 
-               error.message.includes('session_not_found')) {
-      errorMessage = 'Your session has expired. Please sign in again.';
-      // Force a new sign in when refresh token is invalid
-      supabase.auth.signOut({ scope: 'local' });
-    }
-    
+    let errorMessage = getErrorMessage(error);
     setError(errorMessage);
     console.error('Auth error:', error);
   };
