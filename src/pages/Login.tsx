@@ -35,7 +35,6 @@ const Login = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         if (session) {
-          // Wait briefly to allow triggers to complete
           setTimeout(async () => {
             try {
               const { data: profile } = await supabase

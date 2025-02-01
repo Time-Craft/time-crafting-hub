@@ -17,6 +17,9 @@ export const signUp = async (email: string, password: string) => {
     password,
     options: {
       emailRedirectTo: `${window.location.origin}/login`,
+      data: {
+        email,
+      }
     }
   });
   

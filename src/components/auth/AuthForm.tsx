@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Label } from "@/components/ui/label";
 
 interface AuthFormProps {
   onSubmit: (email: string, password: string) => Promise<void>;
@@ -27,10 +28,12 @@ export const AuthForm = ({ onSubmit, isLoading, error, buttonText }: AuthFormPro
         </Alert>
       )}
       
-      <div>
+      <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
         <Input
+          id="email"
           type="email"
-          placeholder="Email"
+          placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
@@ -39,10 +42,12 @@ export const AuthForm = ({ onSubmit, isLoading, error, buttonText }: AuthFormPro
         />
       </div>
       
-      <div>
+      <div className="space-y-2">
+        <Label htmlFor="password">Password</Label>
         <Input
+          id="password"
           type="password"
-          placeholder="Password"
+          placeholder="Enter your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
