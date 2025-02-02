@@ -28,7 +28,7 @@ export const OfferActions = ({
     try {
       await onAccept(offer);
     } finally {
-      setIsSubmitting(false);
+      // We don't reset isSubmitting to keep the button disabled
     }
   };
 
@@ -39,9 +39,9 @@ export const OfferActions = ({
         className="w-full mt-4"
         onClick={handleAcceptClick}
         disabled={isSubmitting || isAccepted}
-        variant={isSubmitting || isAccepted ? "secondary" : "default"}
+        variant="secondary"
       >
-        {isSubmitting ? 'Processing...' : isAccepted ? 'Pending Request' : 'Accept Offer'}
+        {isSubmitting || isAccepted ? 'Pending Request' : 'Accept Offer'}
       </Button>
     );
   }
