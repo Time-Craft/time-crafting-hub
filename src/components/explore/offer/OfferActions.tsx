@@ -1,7 +1,7 @@
 import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimeTransaction } from "@/types/explore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface OfferActionsProps {
   offer: TimeTransaction;
@@ -21,6 +21,13 @@ export const OfferActions = ({
   onAccept,
 }: OfferActionsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Set initial state based on offer status
+  useEffect(() => {
+    if (offer.status === 'in_progress' && offer.recipient_id === currentUserId) {
+      setIsSubmitting(true);
+    }
+  }, [offer.status, offer.recipient_id, currentUserId]);
 
   const handleAcceptClick = async () => {
     if (isSubmitting) return;
