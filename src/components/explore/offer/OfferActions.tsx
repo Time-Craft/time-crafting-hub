@@ -2,6 +2,7 @@ import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimeTransaction } from "@/types/explore";
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface OfferActionsProps {
   offer: TimeTransaction;
@@ -20,22 +21,42 @@ export const OfferActions = ({
   onReject,
   onAccept,
 }: OfferActionsProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Set initial state based on offer status
+  // Check if user has already interacted with this offer
   useEffect(() => {
-    if (offer.status === 'in_progress' && offer.recipient_id === currentUserId) {
-      setIsSubmitting(true);
-    }
-  }, [offer.status, offer.recipient_id, currentUserId]);
+    const checkInteraction = async () => {
+      if (!currentUserId) return;
+      
+      const { data } = await supabase
+        .from('offer_interactions')
+        .select('*')
+        .eq('offer_id', offer.id)
+        .eq('user_id', currentUserId)
+        .single();
+      
+      setHasInteracted(!!data);
+    };
+
+    checkInteraction();
+  }, [offer.id, currentUserId]);
 
   const handleAcceptClick = async () => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+    if (!currentUserId || hasInteracted) return;
+
     try {
+      // Record the interaction first
+      await supabase
+        .from('offer_interactions')
+        .insert({
+          offer_id: offer.id,
+          user_id: currentUserId
+        });
+
+      setHasInteracted(true);
       await onAccept(offer);
-    } finally {
-      // We don't reset isSubmitting to keep the button disabled
+    } catch (error) {
+      console.error('Error handling accept:', error);
     }
   };
 
@@ -45,10 +66,10 @@ export const OfferActions = ({
       <Button 
         className="w-full mt-4"
         onClick={handleAcceptClick}
-        disabled={isSubmitting || isAccepted}
+        disabled={hasInteracted}
         variant="secondary"
       >
-        {isSubmitting || isAccepted ? 'Pending Request' : 'Accept Offer'}
+        {hasInteracted ? 'Pending Request' : 'Accept Offer'}
       </Button>
     );
   }
