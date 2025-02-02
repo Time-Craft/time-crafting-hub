@@ -38,9 +38,10 @@ export const OfferActions = ({
       <Button 
         className="w-full mt-4"
         onClick={handleAcceptClick}
-        disabled={isSubmitting}
+        disabled={isSubmitting || isAccepted}
+        variant={isSubmitting || isAccepted ? "secondary" : "default"}
       >
-        {isAccepted ? 'Pending Request' : 'Accept Offer'}
+        {isSubmitting ? 'Processing...' : isAccepted ? 'Pending Request' : 'Accept Offer'}
       </Button>
     );
   }
