@@ -28,19 +28,23 @@ export const OfferActions = ({
     const checkInteraction = async () => {
       if (!currentUserId) return;
       
-      const { data, error } = await supabase
-        .from('offer_interactions')
-        .select('*')
-        .eq('offer_id', offer.id)
-        .eq('user_id', currentUserId)
-        .single();
-      
-      if (error) {
-        console.error('Error checking interaction:', error);
-        return;
+      try {
+        const { data, error } = await supabase
+          .from('offer_interactions')
+          .select()
+          .eq('offer_id', offer.id)
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+        
+        if (error) {
+          console.error('Error checking interaction:', error);
+          return;
+        }
+        
+        setHasInteracted(!!data);
+      } catch (error) {
+        console.error('Error in checkInteraction:', error);
       }
-      
-      setHasInteracted(!!data);
     };
 
     checkInteraction();
@@ -58,7 +62,10 @@ export const OfferActions = ({
           offer_id: offer.id
         });
 
-      if (interactionError) throw interactionError;
+      if (interactionError) {
+        console.error('Error recording interaction:', interactionError);
+        return;
+      }
 
       setHasInteracted(true);
       await onAccept(offer);
