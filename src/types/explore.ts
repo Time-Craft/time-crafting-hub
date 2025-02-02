@@ -21,3 +21,10 @@ export interface TimeTransaction {
     avatar_url: string | null;
   } | null;
 }
+
+export interface OfferInteraction {
+  id: string;
+  user_id: string;
+  offer_id: string;
+  created_at: string;
+}

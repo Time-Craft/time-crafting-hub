@@ -9,6 +9,32 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      offer_interactions: {
+        Row: {
+          created_at: string
+          offer_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          offer_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          offer_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offer_interactions_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "time_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
