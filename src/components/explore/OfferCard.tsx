@@ -23,6 +23,7 @@ export const OfferCard = ({
   return (
     <Card className="p-6 animate-fadeIn hover:shadow-md transition-all bg-white border-gray-100">
       <div className="flex flex-col gap-4">
+        <OfferHeader
           offer={offer}
           currentUserId={currentUserId}
         />
