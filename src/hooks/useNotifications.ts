@@ -18,7 +18,7 @@ export const useNotifications = () => {
           event: '*',
           schema: 'public',
           table: 'time_transactions',
-          filter: `recipient_id=eq.${session.user.id}`
+          filter: `user_id=eq.${session.user.id}`
         },
         (payload) => {
           console.log('Received transaction update:', payload);
@@ -33,19 +33,22 @@ export const useNotifications = () => {
                 case 'in_progress':
                   toast({
                     title: "New Offer Request",
-                    description: `Someone wants to accept your ${newData.service_type} offer`,
+                    description: `Someone wants to accept your ${newData.service_type} offer for ${newData.amount} hours`,
+                    variant: "default",
                   });
                   break;
                 case 'accepted':
                   toast({
                     title: "Offer Accepted",
                     description: `Your ${newData.service_type} request was accepted`,
+                    variant: "default",
                   });
                   break;
                 case 'declined':
                   toast({
                     title: "Offer Declined",
                     description: `Your ${newData.service_type} request was declined`,
+                    variant: "destructive",
                   });
                   break;
               }
@@ -77,6 +80,7 @@ export const useNotifications = () => {
             toast({
               title: "Balance Updated",
               description: `Your time balance has ${difference > 0 ? 'increased' : 'decreased'} by ${Math.abs(difference)} hours`,
+              variant: difference > 0 ? "default" : "secondary",
             });
           }
         }
