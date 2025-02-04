@@ -16,7 +16,9 @@ export const OfferStatus = ({ offer, currentUserId }: OfferStatusProps) => {
           color: 'text-yellow-600',
           message: currentUserId === offer.user_id 
             ? 'Someone has accepted your offer. Please confirm or decline.'
-            : 'Waiting for confirmation from the offer creator'
+            : currentUserId === offer.recipient_id
+            ? 'Waiting for the offer creator to confirm'
+            : 'This offer is currently being processed'
         };
       case 'accepted':
         return {

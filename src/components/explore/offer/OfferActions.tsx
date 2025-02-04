@@ -5,7 +5,7 @@ import { useState } from "react";
 interface OfferActionsProps {
   offer: TimeTransaction;
   currentUserId: string | undefined;
-  onAccept: (offer: TimeTransaction) => void;
+  onAccept: (offer: TimeTransaction) => Promise<void>;
 }
 
 export const OfferActions = ({
@@ -15,9 +15,15 @@ export const OfferActions = ({
 }: OfferActionsProps) => {
   const [isPending, setIsPending] = useState(false);
 
-  const handleAcceptClick = () => {
+  const handleAcceptClick = async () => {
     setIsPending(true);
-    onAccept(offer);
+    try {
+      await onAccept(offer);
+    } catch (error) {
+      console.error('Error in handleAcceptClick:', error);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   if (currentUserId !== offer.user_id && offer.status === 'open') {
@@ -28,7 +34,7 @@ export const OfferActions = ({
         disabled={isPending}
         variant={isPending ? "outline" : "default"}
       >
-        {isPending ? "Pending..." : "Accept Offer"}
+        {isPending ? "Processing..." : "Accept Offer"}
       </Button>
     );
   }

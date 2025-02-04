@@ -8,6 +8,7 @@ import { OfferList } from "@/components/explore/OfferList";
 import { ExploreHeader } from "@/components/explore/ExploreHeader";
 import { MapView } from "@/components/explore/MapView";
 import type { Profile, TimeTransaction } from "@/types/explore";
+import { useToast } from "@/hooks/use-toast";
 
 const Explore = () => {
   const [view, setView] = useState<"map" | "list">("list");
@@ -15,6 +16,7 @@ const Explore = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const session = useSession();
+  const { toast } = useToast();
 
   // Fetch all profiles with optimized query
   const { data: profiles } = useQuery({
@@ -55,6 +57,24 @@ const Explore = () => {
     enabled: !!session?.user?.id
   });
 
+  // Fetch user's time balance
+  const { data: timeBalance } = useQuery({
+    queryKey: ['timeBalance', session?.user?.id],
+    queryFn: async () => {
+      if (!session?.user?.id) return null;
+      
+      const { data, error } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!session?.user?.id
+  });
+
   // Realtime subscription for offers
   useEffect(() => {
     const channel = supabase
@@ -86,11 +106,60 @@ const Explore = () => {
   );
 
   const handleAcceptOffer = async (offer: TimeTransaction) => {
-    if (!session?.user.id) return;
-    if (offer.user_id === session.user.id) return;
-    
-    // The offer acceptance is handled by the UI state only at this point
-    // Future implementation will include database updates
+    if (!session?.user?.id) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to accept offers",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (offer.user_id === session.user.id) {
+      toast({
+        title: "Error",
+        description: "You cannot accept your own offer",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user has enough balance
+    if (!timeBalance || timeBalance.balance < offer.amount) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You need ${offer.amount} hours to accept this offer. Your balance: ${timeBalance?.balance || 0} hours`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('time_transactions')
+        .update({
+          status: 'in_progress',
+          recipient_id: session.user.id
+        })
+        .eq('id', offer.id)
+        .eq('status', 'open');
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Offer accepted successfully! The creator will be notified.",
+      });
+
+      refetchOffers();
+    } catch (error) {
+      console.error('Error accepting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept offer. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -117,7 +186,7 @@ const Explore = () => {
               ) : (
                 <OfferList 
                   offers={offers}
-                  currentUserId={session?.user.id}
+                  currentUserId={session?.user?.id}
                   onAcceptOffer={handleAcceptOffer}
                 />
               )}
