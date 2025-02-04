@@ -80,7 +80,7 @@ export const useNotifications = () => {
             toast({
               title: "Balance Updated",
               description: `Your time balance has ${difference > 0 ? 'increased' : 'decreased'} by ${Math.abs(difference)} hours`,
-              variant: difference > 0 ? "default" : "secondary",
+              variant: "default", // Changed from "secondary" to "default" to match allowed variants
             });
           }
         }

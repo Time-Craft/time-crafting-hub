@@ -8,7 +8,7 @@ import { Clock } from "lucide-react";
 interface OfferCardProps {
   offer: TimeTransaction;
   currentUserId: string | undefined;
-  onAccept: (offer: TimeTransaction) => void;
+  onAccept: (offer: TimeTransaction) => Promise<void>;
 }
 
 export const OfferCard = ({
@@ -16,10 +16,13 @@ export const OfferCard = ({
   currentUserId,
   onAccept,
 }: OfferCardProps) => {
+  const handleAccept = async (offer: TimeTransaction) => {
+    await onAccept(offer);
+  };
+
   return (
     <Card className="p-6 animate-fadeIn hover:shadow-md transition-all bg-white border-gray-100">
       <div className="flex flex-col gap-4">
-        <OfferHeader 
           offer={offer}
           currentUserId={currentUserId}
         />
@@ -45,7 +48,7 @@ export const OfferCard = ({
         <OfferActions
           offer={offer}
           currentUserId={currentUserId}
-          onAccept={onAccept}
+          onAccept={handleAccept}
         />
       </div>
     </Card>
