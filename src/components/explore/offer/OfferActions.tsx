@@ -1,59 +1,62 @@
-import { Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimeTransaction } from "@/types/explore";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface OfferActionsProps {
   offer: TimeTransaction;
   currentUserId: string | undefined;
-  isAccepted: boolean;
-  onConfirm: (offerId: string) => void;
-  onReject: (offerId: string) => void;
   onAccept: (offer: TimeTransaction) => void;
 }
 
 export const OfferActions = ({
   offer,
   currentUserId,
-  isAccepted,
-  onConfirm,
-  onReject,
   onAccept,
 }: OfferActionsProps) => {
-  const [hasInteracted, setHasInteracted] = useState(false);
-
-  // Check if user has already interacted with this offer
-  useEffect(() => {
-    const checkInteraction = async () => {
-      if (!currentUserId) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('offer_interactions')
-          .select()
-          .eq('offer_id', offer.id)
-          .eq('user_id', currentUserId)
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Error checking interaction:', error);
-          return;
-        }
-        
-        setHasInteracted(!!data);
-      } catch (error) {
-        console.error('Error in checkInteraction:', error);
-      }
-    };
-
-    checkInteraction();
-  }, [offer.id, currentUserId]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const handleAcceptClick = async () => {
-    if (!currentUserId || hasInteracted) return;
+    if (!currentUserId) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to accept offers",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    if (offer.user_id === currentUserId) {
+      toast({
+        title: "Error",
+        description: "You cannot accept your own offer",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
     try {
+      // Check user's balance
+      const { data: balance, error: balanceError } = await supabase
+        .from('time_balances')
+        .select('balance')
+        .eq('id', currentUserId)
+        .single();
+
+      if (balanceError) throw balanceError;
+
+      if (!balance || balance.balance < offer.amount) {
+        toast({
+          title: "Insufficient Balance",
+          description: `You need ${offer.amount} hours. Your balance: ${balance?.balance || 0} hours.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       // Record the interaction
       const { error: interactionError } = await supabase
         .from('offer_interactions')
@@ -67,10 +70,33 @@ export const OfferActions = ({
         return;
       }
 
-      setHasInteracted(true);
+      // Update offer status
+      const { error: updateError } = await supabase
+        .from('time_transactions')
+        .update({ 
+          status: 'in_progress',
+          recipient_id: currentUserId 
+        })
+        .eq('id', offer.id)
+        .eq('status', 'open');
+
+      if (updateError) throw updateError;
+
       await onAccept(offer);
-    } catch (error) {
-      console.error('Error handling accept:', error);
+      
+      toast({
+        title: "Success",
+        description: "Offer accepted successfully",
+      });
+    } catch (error: any) {
+      console.error('Error accepting offer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to accept offer. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -80,32 +106,11 @@ export const OfferActions = ({
       <Button 
         className="w-full mt-4"
         onClick={handleAcceptClick}
-        disabled={hasInteracted}
+        disabled={isLoading}
         variant="secondary"
       >
-        {hasInteracted ? 'Pending Request' : 'Accept Offer'}
+        {isLoading ? "Processing..." : "Accept Offer"}
       </Button>
-    );
-  }
-
-  // Show confirm/reject buttons only if user is the owner and offer is in progress
-  if (currentUserId === offer.user_id && offer.status === 'in_progress') {
-    return (
-      <div className="mt-4 flex gap-2">
-        <Button
-          onClick={() => onConfirm(offer.id)}
-          className="flex-1 bg-green-500 hover:bg-green-600"
-        >
-          <Check className="mr-2 h-4 w-4" /> Confirm
-        </Button>
-        <Button
-          onClick={() => onReject(offer.id)}
-          variant="destructive"
-          className="flex-1"
-        >
-          <X className="mr-2 h-4 w-4" /> Reject
-        </Button>
-      </div>
     );
   }
 

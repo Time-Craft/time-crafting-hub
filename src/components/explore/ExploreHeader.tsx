@@ -14,7 +14,6 @@ interface ExploreHeaderProps {
 export const ExploreHeader = ({
   view,
   setView,
-  range,
   searchQuery,
   setSearchQuery,
   setIsSearchFocused,
@@ -26,27 +25,17 @@ export const ExploreHeader = ({
         <Toggle 
           aria-label="Toggle view" 
           onClick={() => setView(view === "map" ? "list" : "map")}
+          className="bg-primary-light text-primary hover:text-primary-foreground"
         >
           {view === "map" ? "List View" : "Map View"}
         </Toggle>
       </div>
       
-      <div className="space-y-4">
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          setIsSearchFocused={setIsSearchFocused}
-        />
-        
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <MapPin size={16} />
-          <span>Within {range} km</span>
-          <button className="ml-auto flex items-center gap-1">
-            <Filter size={16} />
-            Filter
-          </button>
-        </div>
-      </div>
+      <SearchBar
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        setIsSearchFocused={setIsSearchFocused}
+      />
     </div>
   );
 };
