@@ -13,7 +13,7 @@ export const SearchBar = ({ searchQuery, setSearchQuery, setIsSearchFocused }: S
       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
       <Input
         placeholder="Search users or services..."
-        className="pl-10"
+        className="pl-10 bg-gray-50 border-gray-200 focus:border-primary focus:ring-primary"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         onFocus={() => setIsSearchFocused(true)}

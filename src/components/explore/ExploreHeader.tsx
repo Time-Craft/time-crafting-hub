@@ -19,23 +19,33 @@ export const ExploreHeader = ({
   setIsSearchFocused,
 }: ExploreHeaderProps) => {
   return (
-    <div className="p-4 bg-white shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-semibold">Explore</h1>
-        <Toggle 
-          aria-label="Toggle view" 
-          onClick={() => setView(view === "map" ? "list" : "map")}
-          className="bg-primary-light text-primary hover:text-primary-foreground"
-        >
-          {view === "map" ? "List View" : "Map View"}
-        </Toggle>
+    <div className="bg-white border-b">
+      <div className="px-4 py-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">Explore</h1>
+          <Toggle 
+            aria-label="Toggle view" 
+            onClick={() => setView(view === "map" ? "list" : "map")}
+            className="bg-primary-light text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+          >
+            {view === "map" ? (
+              <span className="flex items-center gap-2">
+                <Filter className="w-4 h-4" /> List View
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <MapPin className="w-4 h-4" /> Map View
+              </span>
+            )}
+          </Toggle>
+        </div>
+        
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setIsSearchFocused={setIsSearchFocused}
+        />
       </div>
-      
-      <SearchBar
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        setIsSearchFocused={setIsSearchFocused}
-      />
     </div>
   );
 };

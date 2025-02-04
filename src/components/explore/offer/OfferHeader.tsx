@@ -12,18 +12,20 @@ export const OfferHeader = ({ offer }: OfferHeaderProps) => {
   return (
     <div className="flex justify-between items-start">
       <div className="flex items-center gap-4">
-        <Avatar className="h-12 w-12">
+        <Avatar className="h-12 w-12 border-2 border-primary-light">
           <AvatarImage src={offer.profiles?.avatar_url || ''} />
-          <AvatarFallback>
+          <AvatarFallback className="bg-primary-light text-primary">
             <User2 className="h-6 w-6" />
           </AvatarFallback>
         </Avatar>
         <div>
-          <h3 className="font-medium">{offer.profiles?.username || 'Anonymous'}</h3>
+          <h3 className="font-medium text-gray-900">
+            {offer.profiles?.username || 'Anonymous'}
+          </h3>
           <p className="text-sm text-gray-500">{offer.service_type}</p>
         </div>
       </div>
-      <Badge variant="secondary">
+      <Badge variant="outline" className="bg-primary-light text-primary border-primary-light">
         {offer.amount} hours
       </Badge>
     </div>

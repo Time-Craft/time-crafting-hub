@@ -20,14 +20,13 @@ export const OfferActions = ({
     onAccept(offer);
   };
 
-  // Show accept button only if user is not the owner and offer is open
   if (currentUserId !== offer.user_id && offer.status === 'open') {
     return (
       <Button 
         className="w-full mt-4"
         onClick={handleAcceptClick}
         disabled={isPending}
-        variant={isPending ? "outline" : "secondary"}
+        variant={isPending ? "outline" : "default"}
       >
         {isPending ? "Pending..." : "Accept Offer"}
       </Button>

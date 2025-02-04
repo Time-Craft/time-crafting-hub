@@ -17,7 +17,7 @@ export const OfferCard = ({
   onAccept,
 }: OfferCardProps) => {
   return (
-    <Card className="p-4 animate-fadeIn hover:shadow-md transition-shadow">
+    <Card className="p-6 animate-fadeIn hover:shadow-md transition-all bg-white border-gray-100">
       <div className="flex flex-col gap-4">
         <OfferHeader 
           offer={offer}
@@ -26,16 +26,18 @@ export const OfferCard = ({
         
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock size={16} />
+            <Clock size={16} className="text-primary" />
             <span>{offer.amount} hours</span>
             <Badge variant="outline" className="ml-auto">
               {offer.status}
             </Badge>
           </div>
           
-          <p className="text-sm text-gray-600">{offer.description}</p>
+          <p className="text-sm text-gray-600 leading-relaxed">
+            {offer.description}
+          </p>
           
-          <Badge variant="secondary" className="w-fit">
+          <Badge variant="secondary" className="w-fit bg-primary-light text-primary hover:bg-primary-light">
             {offer.service_type}
           </Badge>
         </div>

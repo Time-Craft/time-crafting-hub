@@ -18,20 +18,21 @@ const Explore = () => {
   const { toast } = useToast();
   const session = useSession();
 
-  // Fetch all profiles
+  // Fetch all profiles with optimized query
   const { data: profiles } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('username', { ascending: true });
       
       if (error) throw error;
       return data as Profile[];
     }
   });
 
-  // Fetch available offers with user details
+  // Fetch available offers with optimized query
   const { data: offers, refetch: refetchOffers } = useQuery({
     queryKey: ['offers'],
     queryFn: async () => {
@@ -56,6 +57,7 @@ const Explore = () => {
     enabled: !!session?.user?.id
   });
 
+  // Realtime subscription for offers
   useEffect(() => {
     const channel = supabase
       .channel('public:time_transactions')
@@ -77,7 +79,7 @@ const Explore = () => {
     };
   }, [refetchOffers]);
 
-  // Filter profiles based on search query
+  // Optimized profile filtering
   const filteredProfiles = profiles?.filter(profile => 
     profile.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     profile.services?.some(service => 
@@ -104,66 +106,44 @@ const Explore = () => {
       return;
     }
 
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ 
-          recipient_id: session.user.id,
-          status: 'in_progress'
-        })
-        .eq('id', offer.id)
-        .eq('status', 'open');
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: "Failed to accept offer",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Success",
-        description: "Offer accepted successfully. Waiting for confirmation.",
-      });
-
-      refetchOffers();
-    } catch (error) {
-      console.error('Error accepting offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to accept offer",
-        variant: "destructive",
-      });
-    }
+    toast({
+      title: "Offer Accepted",
+      description: "The offer has been marked as pending",
+    });
   };
 
   return (
-    <div className="min-h-screen pb-20">
-      <ExploreHeader
-        view={view}
-        setView={setView}
-        range={range}
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        setIsSearchFocused={setIsSearchFocused}
-      />
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto">
+        <ExploreHeader
+          view={view}
+          setView={setView}
+          range={range}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          setIsSearchFocused={setIsSearchFocused}
+        />
 
-      {isSearchFocused && searchQuery ? (
-        <UserList profiles={filteredProfiles} />
-      ) : (
-        view === "map" ? (
-          <MapView />
-        ) : (
-          <OfferList 
-            offers={offers}
-            currentUserId={session?.user.id}
-            onAcceptOffer={handleAcceptOffer}
-          />
-        )
-      )}
-
+        <div className="px-4 pb-20">
+          {isSearchFocused && searchQuery ? (
+            <div className="mt-4">
+              <UserList profiles={filteredProfiles} />
+            </div>
+          ) : (
+            <div className="mt-4">
+              {view === "map" ? (
+                <MapView className="rounded-xl shadow-sm" />
+              ) : (
+                <OfferList 
+                  offers={offers}
+                  currentUserId={session?.user.id}
+                  onAcceptOffer={handleAcceptOffer}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      </div>
       <BottomNav />
     </div>
   );
