@@ -8,12 +8,18 @@ interface OfferActionsProps {
   offer: TimeTransaction;
   currentUserId: string | undefined;
   onAccept: (offer: TimeTransaction) => void;
+  onDelete?: (offerId: string) => Promise<void>;
+  onConfirm?: (offerId: string) => Promise<void>;
+  onReject?: (offerId: string) => Promise<void>;
 }
 
 export const OfferActions = ({
   offer,
   currentUserId,
   onAccept,
+  onDelete,
+  onConfirm,
+  onReject,
 }: OfferActionsProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -44,7 +50,7 @@ export const OfferActions = ({
         .from('time_balances')
         .select('balance')
         .eq('id', currentUserId)
-        .single();
+        .maybeSingle();
 
       if (balanceError) throw balanceError;
 
@@ -54,19 +60,6 @@ export const OfferActions = ({
           description: `You need ${offer.amount} hours. Your balance: ${balance?.balance || 0} hours.`,
           variant: "destructive",
         });
-        return;
-      }
-
-      // Record the interaction
-      const { error: interactionError } = await supabase
-        .from('offer_interactions')
-        .insert({
-          user_id: currentUserId,
-          offer_id: offer.id
-        });
-
-      if (interactionError) {
-        console.error('Error recording interaction:', interactionError);
         return;
       }
 
@@ -112,6 +105,42 @@ export const OfferActions = ({
         {isLoading ? "Processing..." : "Accept Offer"}
       </Button>
     );
+  }
+
+  // Show action buttons for the offer owner
+  if (currentUserId === offer.user_id) {
+    if (offer.status === 'open' && onDelete) {
+      return (
+        <Button 
+          className="w-full mt-4"
+          onClick={() => onDelete(offer.id)}
+          variant="destructive"
+        >
+          Delete Offer
+        </Button>
+      );
+    }
+
+    if (offer.status === 'in_progress' && onConfirm && onReject) {
+      return (
+        <div className="flex gap-2 mt-4">
+          <Button 
+            className="flex-1"
+            onClick={() => onConfirm(offer.id)}
+            variant="default"
+          >
+            Confirm
+          </Button>
+          <Button 
+            className="flex-1"
+            onClick={() => onReject(offer.id)}
+            variant="destructive"
+          >
+            Reject
+          </Button>
+        </div>
+      );
+    }
   }
 
   return null;

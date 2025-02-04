@@ -9,12 +9,18 @@ interface OfferCardProps {
   offer: TimeTransaction;
   currentUserId: string | undefined;
   onAccept: (offer: TimeTransaction) => void;
+  onDelete?: (offerId: string) => Promise<void>;
+  onConfirm?: (offerId: string) => Promise<void>;
+  onReject?: (offerId: string) => Promise<void>;
 }
 
 export const OfferCard = ({
   offer,
   currentUserId,
   onAccept,
+  onDelete,
+  onConfirm,
+  onReject,
 }: OfferCardProps) => {
   return (
     <Card className="p-4 animate-fadeIn hover:shadow-md transition-shadow">
@@ -44,6 +50,9 @@ export const OfferCard = ({
           offer={offer}
           currentUserId={currentUserId}
           onAccept={onAccept}
+          onDelete={onDelete}
+          onConfirm={onConfirm}
+          onReject={onReject}
         />
       </div>
     </Card>
