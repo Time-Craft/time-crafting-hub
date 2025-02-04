@@ -5,7 +5,7 @@ import { OfferCard } from "./OfferCard";
 interface OfferListProps {
   offers: TimeTransaction[] | null;
   currentUserId: string | undefined;
-  onAcceptOffer: (offer: TimeTransaction) => void;
+  onAcceptOffer: (offer: TimeTransaction) => Promise<void>;
 }
 
 export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
@@ -18,6 +18,10 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
     );
   }
 
+  const handleAcceptOffer = async (offer: TimeTransaction) => {
+    await onAcceptOffer(offer);
+  };
+
   return (
     <ScrollArea className="h-[calc(100vh-200px)]">
       <div className="space-y-4 p-4">
@@ -26,7 +30,7 @@ export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListPro
             key={offer.id}
             offer={offer}
             currentUserId={currentUserId}
-            onAccept={onAcceptOffer}
+            onAccept={handleAcceptOffer}
           />
         ))}
       </div>
