@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import BottomNav from "@/components/BottomNav";
-import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@supabase/auth-helpers-react";
 import { UserList } from "@/components/explore/UserList";
 import { OfferList } from "@/components/explore/OfferList";
@@ -15,7 +14,6 @@ const Explore = () => {
   const [range, setRange] = useState<number>(5);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const { toast } = useToast();
   const session = useSession();
 
   // Fetch all profiles with optimized query
@@ -88,28 +86,11 @@ const Explore = () => {
   );
 
   const handleAcceptOffer = async (offer: TimeTransaction) => {
-    if (!session?.user.id) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to accept offers",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (offer.user_id === session.user.id) {
-      toast({
-        title: "Error",
-        description: "You cannot accept your own offer",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    toast({
-      title: "Offer Accepted",
-      description: "The offer has been marked as pending",
-    });
+    if (!session?.user.id) return;
+    if (offer.user_id === session.user.id) return;
+    
+    // The offer acceptance is handled by the UI state only at this point
+    // Future implementation will include database updates
   };
 
   return (
