@@ -5,14 +5,10 @@ import { OfferCard } from "./OfferCard";
 interface OfferListProps {
   offers: TimeTransaction[] | null;
   currentUserId: string | undefined;
+  onAcceptOffer: (offer: TimeTransaction) => void;
 }
 
-export const OfferList = ({ offers, currentUserId }: OfferListProps) => {
-  const handleAcceptOffer = (offer: TimeTransaction) => {
-    // This is now just a placeholder function since we're only handling UI state
-    console.log('Offer accepted:', offer.id);
-  };
-
+export const OfferList = ({ offers, currentUserId, onAcceptOffer }: OfferListProps) => {
   if (!offers?.length) {
     return (
       <div className="text-center py-4 text-gray-500">
@@ -29,7 +25,7 @@ export const OfferList = ({ offers, currentUserId }: OfferListProps) => {
             key={offer.id}
             offer={offer}
             currentUserId={currentUserId}
-            onAccept={handleAcceptOffer}
+            onAccept={onAcceptOffer}
           />
         ))}
       </div>
