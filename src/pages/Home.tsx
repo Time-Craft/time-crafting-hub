@@ -23,7 +23,7 @@ const Home = () => {
     queryFn: async () => {
       if (!session?.user?.id) {
         navigate('/login', { replace: true });
-        return 30; // Default to 30 if not logged in
+        return 30;
       }
 
       const { data, error } = await supabase
@@ -49,11 +49,13 @@ const Home = () => {
 
       return data?.balance || 30;
     },
-    enabled: !!session?.user?.id
+    enabled: !!session?.user?.id,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    cacheTime: 1000 * 60 * 30, // Keep data in cache for 30 minutes
   });
 
-  // Fetch pending offers that need confirmation
-  const { data: pendingOffers } = useQuery({
+  // Fetch pending offers that need confirmation with proper caching
+  const { data: pendingOffers, isLoading: isLoadingOffers } = useQuery({
     queryKey: ['pending-offers'],
     queryFn: async () => {
       if (!session?.user?.id) return [];
@@ -73,10 +75,14 @@ const Home = () => {
       if (error) throw error;
       return data as TimeTransaction[];
     },
-    enabled: !!session?.user?.id
+    enabled: !!session?.user?.id,
+    staleTime: 1000 * 30, // Consider data fresh for 30 seconds
+    cacheTime: 1000 * 60 * 5, // Keep data in cache for 5 minutes
+    refetchOnWindowFocus: true, // Refetch when window regains focus
+    refetchOnMount: true, // Refetch when component mounts
+    refetchOnReconnect: true, // Refetch when internet reconnects
   });
 
-  // Handle offer confirmation
   const handleConfirmOffer = async (offer: TimeTransaction) => {
     try {
       const { error } = await supabase
@@ -90,13 +96,15 @@ const Home = () => {
 
       if (error) throw error;
 
+      // Invalidate relevant queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
+
       toast({
         title: "Success",
         description: "Service completed and confirmed successfully",
       });
-
-      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
-      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
     } catch (error) {
       console.error('Error confirming offer:', error);
       toast({
@@ -107,23 +115,28 @@ const Home = () => {
     }
   };
 
-  // Handle offer rejection
   const handleDeclineOffer = async (offer: TimeTransaction) => {
     try {
       const { error } = await supabase
         .from('time_transactions')
-        .update({ status: 'declined' })
+        .update({ 
+          status: 'declined',
+          completed_at: new Date().toISOString()
+        })
         .eq('id', offer.id)
         .eq('user_id', session?.user?.id);
 
       if (error) throw error;
 
+      // Invalidate relevant queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
+
       toast({
         title: "Success",
         description: "Offer declined successfully",
       });
-
-      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
     } catch (error) {
       console.error('Error declining offer:', error);
       toast({
@@ -202,8 +215,10 @@ const Home = () => {
         },
         (payload) => {
           console.log('Transaction update:', payload);
-          queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
+          // Invalidate queries to trigger refetch when data changes
           queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+          queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
+          queryClient.invalidateQueries({ queryKey: ['time-balance'] });
         }
       )
       .subscribe();
@@ -271,7 +286,9 @@ const Home = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {!pendingOffers?.length ? (
+                {isLoadingOffers ? (
+                  <p className="text-gray-500 text-center">Loading offers...</p>
+                ) : !pendingOffers?.length ? (
                   <p className="text-gray-500 text-center">No pending offers to confirm</p>
                 ) : (
                   pendingOffers?.map((offer) => (
@@ -284,7 +301,7 @@ const Home = () => {
                             <Clock className="h-4 w-4 text-gray-500" />
                             <span className="text-sm font-medium text-gray-700">{offer.amount} hours</span>
                             <Badge variant="secondary" className="ml-2">
-                              Pending
+                              Pending Confirmation
                             </Badge>
                           </div>
                           <p className="text-sm text-gray-500 mt-2">
