@@ -2,6 +2,7 @@ import { LogOut, Edit, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProfileActionsProps {
   isEditing: boolean;
@@ -19,19 +20,44 @@ export const ProfileActions = ({
   onLogout: propOnLogout 
 }: ProfileActionsProps) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleLogout = async () => {
     try {
-      // Attempt to sign out
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
+        // If we get a session error, we should still redirect to login
+        // as the session is invalid anyway
+        if (error.message.includes('session_not_found') || 
+            error.status === 403) {
+          console.log('Session already expired, redirecting to login');
+          navigate('/login', { replace: true });
+          if (propOnLogout) {
+            propOnLogout();
+          }
+          return;
+        }
+        
+        // For other errors, show a toast
         console.error('Logout error:', error);
+        toast({
+          title: "Error logging out",
+          description: "Please try again",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Successful logout
+      navigate('/login', { replace: true });
+      if (propOnLogout) {
+        propOnLogout();
       }
     } catch (error) {
       console.error('Unexpected logout error:', error);
-    } finally {
-      // Always navigate to login page and call the parent's onLogout
-      // regardless of whether the signOut was successful
+      // Even if there's an error, redirect to login
+      // as it's better to force a re-login than leave the user in a potentially invalid state
       navigate('/login', { replace: true });
       if (propOnLogout) {
         propOnLogout();
