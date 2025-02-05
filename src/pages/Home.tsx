@@ -51,7 +51,7 @@ const Home = () => {
     },
     enabled: !!session?.user?.id,
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
-    cacheTime: 1000 * 60 * 30, // Keep data in cache for 30 minutes
+    gcTime: 1000 * 60 * 30, // Keep data in garbage collection for 30 minutes
   });
 
   // Fetch pending offers that need confirmation with proper caching
@@ -77,10 +77,10 @@ const Home = () => {
     },
     enabled: !!session?.user?.id,
     staleTime: 1000 * 30, // Consider data fresh for 30 seconds
-    cacheTime: 1000 * 60 * 5, // Keep data in cache for 5 minutes
-    refetchOnWindowFocus: true, // Refetch when window regains focus
-    refetchOnMount: true, // Refetch when component mounts
-    refetchOnReconnect: true, // Refetch when internet reconnects
+    gcTime: 1000 * 60 * 5, // Keep data in garbage collection for 5 minutes
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
   });
 
   const handleConfirmOffer = async (offer: TimeTransaction) => {
