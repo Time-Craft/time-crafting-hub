@@ -18,7 +18,6 @@ const Home = () => {
   const queryClient = useQueryClient();
   const session = useSession();
 
-  // Fetch user's time balance with real-time updates
   const { data: timeBalance = 30 } = useQuery({
     queryKey: ['time-balance'],
     queryFn: async () => {
@@ -68,7 +67,7 @@ const Home = () => {
             avatar_url
           )
         `)
-        .eq('recipient_id', session.user.id)
+        .eq('user_id', session.user.id)
         .eq('status', 'in_progress');
 
       if (error) throw error;
@@ -135,7 +134,6 @@ const Home = () => {
     }
   };
 
-  // Fetch user's transaction statistics with real-time updates
   const { data: stats } = useQuery({
     queryKey: ['transaction-stats'],
     queryFn: async () => {
@@ -215,7 +213,6 @@ const Home = () => {
     };
   }, [queryClient, session?.user?.id]);
 
-  // Load user profile
   useEffect(() => {
     const loadProfile = async () => {
       if (!session?.user?.id) {
