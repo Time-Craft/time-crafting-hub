@@ -9,7 +9,7 @@ export const useExploreOffers = () => {
   const session = useSession();
   const { toast } = useToast();
 
-  const { data: timeBalance } = useQuery({
+  const { data: timeBalance, refetch: refetchBalance } = useQuery({
     queryKey: ['timeBalance', session?.user?.id],
     queryFn: async () => {
       if (!session?.user?.id) return null;
@@ -72,6 +72,9 @@ export const useExploreOffers = () => {
       });
       return;
     }
+
+    // Ensure we have the latest balance
+    await refetchBalance();
 
     if (!timeBalance || timeBalance.balance < offer.amount) {
       toast({
