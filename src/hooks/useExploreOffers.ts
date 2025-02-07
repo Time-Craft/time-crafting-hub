@@ -1,3 +1,4 @@
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -23,8 +24,8 @@ export const useExploreOffers = () => {
       return data;
     },
     enabled: !!session?.user?.id,
-    staleTime: 1000 * 60, // 1 minute
-    gcTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 60,
+    gcTime: 1000 * 60 * 5
   });
 
   const { data: offers, refetch: refetchOffers } = useQuery({
@@ -49,8 +50,8 @@ export const useExploreOffers = () => {
       return data as TimeTransaction[];
     },
     enabled: !!session?.user?.id,
-    staleTime: 1000 * 30, // 30 seconds
-    gcTime: 1000 * 60 * 5 // 5 minutes
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 5
   });
 
   const handleAcceptOffer = async (offer: TimeTransaction) => {

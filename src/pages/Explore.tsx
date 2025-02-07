@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useSession } from "@supabase/auth-helpers-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +43,8 @@ const Explore = () => {
           schema: 'public',
           table: 'time_transactions'
         },
-        () => {
+        (payload) => {
+          console.log('Received realtime update:', payload);
           refetchOffers();
         }
       )
