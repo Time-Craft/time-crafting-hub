@@ -44,6 +44,7 @@ export const useExploreOffers = () => {
           )
         `)
         .eq('type', 'earned')
+        .eq('status', 'open')  // Only fetch open offers
         .neq('user_id', session.user.id)
         .order('created_at', { ascending: false });
       
@@ -112,19 +113,26 @@ export const useExploreOffers = () => {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('time_transactions')
         .update({
           status: 'in_progress',
           recipient_id: session.user.id,
-          type: 'spent'  // Mark as spent for the recipient
         })
         .eq('id', offer.id)
         .eq('status', 'open')
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      if (!data) {
+        toast({
+          title: "Error",
+          description: "This offer is no longer available",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // Create a spent transaction for the recipient
       const { error: spentError } = await supabase
