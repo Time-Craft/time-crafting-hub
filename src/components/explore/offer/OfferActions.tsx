@@ -26,9 +26,22 @@ export const OfferActions = ({
     }
   };
 
-  // Show no buttons if the offer is in progress or completed
-  if (offer.status === 'in_progress' || offer.status === 'accepted' || offer.status === 'declined') {
+  // Show no buttons for accepted or declined offers
+  if (offer.status === 'accepted' || offer.status === 'declined') {
     return null;
+  }
+
+  // Show "In Progress" badge for offers that have been accepted and are awaiting confirmation
+  if (offer.status === 'in_progress') {
+    return (
+      <Button 
+        className="w-full mt-4"
+        disabled={true}
+        variant="secondary"
+      >
+        In Progress - Awaiting Confirmation
+      </Button>
+    );
   }
 
   // Show accept button only for open offers and when user is not the creator

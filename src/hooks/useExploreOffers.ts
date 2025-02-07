@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@supabase/auth-helpers-react";
+import { useEffect } from "react";
 import type { TimeTransaction } from "@/types/explore";
 
 export const useExploreOffers = () => {
@@ -54,6 +55,31 @@ export const useExploreOffers = () => {
     gcTime: 1000 * 60 * 5
   });
 
+  // Subscribe to realtime updates
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const channel = supabase
+      .channel('public:time_transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_transactions',
+        },
+        () => {
+          console.log('Received realtime update, refetching offers...');
+          refetchOffers();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id, refetchOffers]);
+
   const handleAcceptOffer = async (offer: TimeTransaction) => {
     if (!session?.user?.id) {
       toast({
@@ -90,12 +116,30 @@ export const useExploreOffers = () => {
         .from('time_transactions')
         .update({
           status: 'in_progress',
-          recipient_id: session.user.id
+          recipient_id: session.user.id,
+          type: 'spent'  // Mark as spent for the recipient
         })
         .eq('id', offer.id)
-        .eq('status', 'open');
+        .eq('status', 'open')
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Create a spent transaction for the recipient
+      const { error: spentError } = await supabase
+        .from('time_transactions')
+        .insert({
+          user_id: session.user.id,
+          recipient_id: offer.user_id,
+          type: 'spent',
+          amount: offer.amount,
+          service_type: offer.service_type,
+          description: offer.description,
+          status: 'in_progress'
+        });
+
+      if (spentError) throw spentError;
 
       toast({
         title: "Success",

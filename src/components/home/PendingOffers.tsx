@@ -1,3 +1,4 @@
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@supabase/auth-helpers-react";
@@ -7,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, Clock, X } from "lucide-react";
 import type { TimeTransaction } from "@/types/explore";
+import { useEffect } from "react";
 
 export const PendingOffers = () => {
   const session = useSession();
@@ -25,10 +27,15 @@ export const PendingOffers = () => {
           profiles:user_id (
             username,
             avatar_url
+          ),
+          recipient:recipient_id (
+            username,
+            avatar_url
           )
         `)
         .eq('user_id', session.user.id)
-        .eq('status', 'in_progress');
+        .eq('status', 'in_progress')
+        .eq('type', 'earned');
 
       if (error) throw error;
       return data as TimeTransaction[];
@@ -37,6 +44,31 @@ export const PendingOffers = () => {
     staleTime: 1000 * 30,
     gcTime: 1000 * 60 * 5,
   });
+
+  // Subscribe to realtime updates for pending offers
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const channel = supabase
+      .channel('public:time_transactions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'time_transactions',
+          filter: `user_id=eq.${session.user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.user?.id, queryClient]);
 
   const handleConfirmOffer = async (offer: TimeTransaction) => {
     try {
@@ -50,6 +82,20 @@ export const PendingOffers = () => {
         .eq('user_id', session?.user?.id);
 
       if (error) throw error;
+
+      // Also update the recipient's spent transaction
+      const { error: recipientError } = await supabase
+        .from('time_transactions')
+        .update({ 
+          status: 'accepted',
+          completed_at: new Date().toISOString()
+        })
+        .eq('user_id', offer.recipient_id)
+        .eq('recipient_id', session?.user?.id)
+        .eq('service_type', offer.service_type)
+        .eq('status', 'in_progress');
+
+      if (recipientError) throw recipientError;
 
       queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
       queryClient.invalidateQueries({ queryKey: ['time-balance'] });
@@ -81,6 +127,20 @@ export const PendingOffers = () => {
         .eq('user_id', session?.user?.id);
 
       if (error) throw error;
+
+      // Also update the recipient's spent transaction
+      const { error: recipientError } = await supabase
+        .from('time_transactions')
+        .update({ 
+          status: 'declined',
+          completed_at: new Date().toISOString()
+        })
+        .eq('user_id', offer.recipient_id)
+        .eq('recipient_id', session?.user?.id)
+        .eq('service_type', offer.service_type)
+        .eq('status', 'in_progress');
+
+      if (recipientError) throw recipientError;
 
       queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
       queryClient.invalidateQueries({ queryKey: ['time-balance'] });
@@ -128,7 +188,7 @@ export const PendingOffers = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
-                          Requested by: {offer.profiles?.username || 'Anonymous'}
+                          Requested by: {offer.recipient?.username || 'Anonymous'}
                         </p>
                       </div>
                     </div>
