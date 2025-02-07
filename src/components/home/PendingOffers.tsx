@@ -188,7 +188,7 @@ export const PendingOffers = () => {
                           </Badge>
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
-                          Requested by: {offer.recipient?.username || 'Anonymous'}
+                          Requested by: {offer.profiles?.username || 'Anonymous'}
                         </p>
                       </div>
                     </div>
