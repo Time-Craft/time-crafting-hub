@@ -18,7 +18,7 @@ export const useExploreOffers = () => {
         .from('time_balances')
         .select('balance')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
