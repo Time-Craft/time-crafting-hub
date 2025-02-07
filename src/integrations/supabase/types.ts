@@ -122,6 +122,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_recipient_profile"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_profile"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "time_transactions_profiles_fkey"
             columns: ["user_id"]
             isOneToOne: false

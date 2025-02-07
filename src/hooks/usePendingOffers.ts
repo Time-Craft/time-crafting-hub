@@ -67,6 +67,7 @@ export const usePendingOffers = () => {
 
   const handleConfirmOffer = async (offer: TimeTransaction) => {
     try {
+      // Update the earned transaction
       const { error } = await supabase
         .from('time_transactions')
         .update({ 
@@ -78,6 +79,7 @@ export const usePendingOffers = () => {
 
       if (error) throw error;
 
+      // Update the corresponding spent transaction
       const { error: recipientError } = await supabase
         .from('time_transactions')
         .update({ 
@@ -111,6 +113,7 @@ export const usePendingOffers = () => {
 
   const handleDeclineOffer = async (offer: TimeTransaction) => {
     try {
+      // Update the earned transaction
       const { error } = await supabase
         .from('time_transactions')
         .update({ 
@@ -122,6 +125,7 @@ export const usePendingOffers = () => {
 
       if (error) throw error;
 
+      // Update the corresponding spent transaction
       const { error: recipientError } = await supabase
         .from('time_transactions')
         .update({ 
