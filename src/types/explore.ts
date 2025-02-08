@@ -1,3 +1,4 @@
+
 export interface Profile {
   id: string;
   username: string | null;
@@ -17,6 +18,10 @@ export interface TimeTransaction {
   status: 'open' | 'in_progress' | 'accepted' | 'declined';
   completed_at: string | null;
   profiles?: {
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
+  recipient?: {
     username: string | null;
     avatar_url: string | null;
   } | null;

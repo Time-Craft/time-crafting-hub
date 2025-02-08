@@ -38,7 +38,7 @@ export const useExploreOffers = () => {
         .from('time_transactions')
         .select(`
           *,
-          profiles:user_id (
+          profiles!fk_user_profile (
             username,
             avatar_url
           )
