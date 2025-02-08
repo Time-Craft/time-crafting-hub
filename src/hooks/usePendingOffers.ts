@@ -20,11 +20,11 @@ export const usePendingOffers = () => {
         .from('time_transactions')
         .select(`
           *,
-          profiles:user_id (
+          profiles!fk_user_profile (
             username,
             avatar_url
           ),
-          recipient:recipient_id (
+          recipient:profiles!fk_recipient_profile (
             username,
             avatar_url
           )
