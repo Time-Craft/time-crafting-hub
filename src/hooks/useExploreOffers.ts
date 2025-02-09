@@ -164,7 +164,7 @@ export const useExploreOffers = () => {
         .eq('id', offer.id)
         .eq('status', 'open')
         .select()
-        .maybeSingle();
+        .single();
 
       if (updateError) throw updateError;
       if (!updatedOffer) {
