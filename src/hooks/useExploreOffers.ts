@@ -48,7 +48,7 @@ export const useExploreOffers = () => {
           )
         `)
         .eq('type', 'earned')
-        .eq('status', 'open')  // Only fetch open offers
+        .eq('status', 'open')
         .neq('user_id', session.user.id)
         .order('created_at', { ascending: false });
       
@@ -117,6 +117,26 @@ export const useExploreOffers = () => {
     }
 
     try {
+      // First check if the offer is still available
+      const { data: currentOffer, error: checkError } = await supabase
+        .from('time_transactions')
+        .select('status')
+        .eq('id', offer.id)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (!currentOffer || currentOffer.status !== 'open') {
+        toast({
+          title: "Error",
+          description: "This offer is no longer available",
+          variant: "destructive",
+        });
+        refetchOffers();
+        return;
+      }
+
+      // If offer is available, try to accept it
       const { data, error } = await supabase
         .from('time_transactions')
         .update({
@@ -132,9 +152,10 @@ export const useExploreOffers = () => {
       if (!data) {
         toast({
           title: "Error",
-          description: "This offer is no longer available",
+          description: "Failed to accept offer. Please try again.",
           variant: "destructive",
         });
+        refetchOffers();
         return;
       }
 
@@ -166,6 +187,7 @@ export const useExploreOffers = () => {
         description: "Failed to accept offer. Please try again.",
         variant: "destructive",
       });
+      refetchOffers();
     }
   };
 

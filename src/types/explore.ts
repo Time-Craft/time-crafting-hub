@@ -17,11 +17,11 @@ export interface TimeTransaction {
   recipient_id: string | null;
   status: 'open' | 'in_progress' | 'accepted' | 'declined';
   completed_at: string | null;
-  profiles?: {
+  profiles: {
     username: string | null;
     avatar_url: string | null;
   } | null;
-  recipient?: {
+  recipient: {
     username: string | null;
     avatar_url: string | null;
   } | null;
