@@ -60,11 +60,11 @@ export const useExploreOffers = () => {
     gcTime: 1000 * 60 * 5
   });
 
-  // Subscribe to realtime updates
+  // Subscribe to realtime updates for offers and balances
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    const channel = supabase
+    const offersChannel = supabase
       .channel('public:time_transactions')
       .on(
         'postgres_changes',
@@ -74,22 +74,40 @@ export const useExploreOffers = () => {
           table: 'time_transactions',
         },
         () => {
-          console.log('Received realtime update, refetching offers...');
+          console.log('Received realtime update for transactions, refetching...');
           refetchOffers();
         }
       )
       .subscribe();
 
+    const balancesChannel = supabase
+      .channel('public:time_balances')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'time_balances',
+          filter: `id=eq.${session.user.id}`,
+        },
+        () => {
+          console.log('Received realtime update for balance, refetching...');
+          refetchBalance();
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(offersChannel);
+      supabase.removeChannel(balancesChannel);
     };
-  }, [session?.user?.id, refetchOffers]);
+  }, [session?.user?.id, refetchOffers, refetchBalance]);
 
   const handleAcceptOffer = async (offer: TimeTransaction) => {
     if (!session?.user?.id) {
       toast({
-        title: "Error",
-        description: "You must be logged in to accept offers",
+        title: "Authentication Required",
+        description: "Please sign in to accept offers",
         variant: "destructive",
       });
       return;
@@ -97,7 +115,7 @@ export const useExploreOffers = () => {
 
     if (offer.user_id === session.user.id) {
       toast({
-        title: "Error",
+        title: "Invalid Action",
         description: "You cannot accept your own offer",
         variant: "destructive",
       });
@@ -117,7 +135,7 @@ export const useExploreOffers = () => {
     }
 
     try {
-      // First check if the offer is still available
+      // Start a Supabase transaction
       const { data: currentOffer, error: checkError } = await supabase
         .from('time_transactions')
         .select('status')
@@ -128,7 +146,7 @@ export const useExploreOffers = () => {
 
       if (!currentOffer || currentOffer.status !== 'open') {
         toast({
-          title: "Error",
+          title: "Offer Unavailable",
           description: "This offer is no longer available",
           variant: "destructive",
         });
@@ -136,8 +154,8 @@ export const useExploreOffers = () => {
         return;
       }
 
-      // If offer is available, try to accept it
-      const { data, error } = await supabase
+      // Update the original offer to in_progress
+      const { data: updatedOffer, error: updateError } = await supabase
         .from('time_transactions')
         .update({
           status: 'in_progress',
@@ -148,15 +166,9 @@ export const useExploreOffers = () => {
         .select()
         .maybeSingle();
 
-      if (error) throw error;
-      if (!data) {
-        toast({
-          title: "Error",
-          description: "Failed to accept offer. Please try again.",
-          variant: "destructive",
-        });
-        refetchOffers();
-        return;
+      if (updateError) throw updateError;
+      if (!updatedOffer) {
+        throw new Error('Failed to update offer status');
       }
 
       // Create a spent transaction for the recipient
@@ -176,10 +188,12 @@ export const useExploreOffers = () => {
 
       toast({
         title: "Success",
-        description: "Offer accepted successfully! The creator will be notified.",
+        description: "Offer accepted successfully! Waiting for creator confirmation.",
       });
 
+      // Refetch data to update UI
       refetchOffers();
+      refetchBalance();
     } catch (error) {
       console.error('Error accepting offer:', error);
       toast({
@@ -187,7 +201,9 @@ export const useExploreOffers = () => {
         description: "Failed to accept offer. Please try again.",
         variant: "destructive",
       });
+      // Refetch to ensure UI is in sync with server state
       refetchOffers();
+      refetchBalance();
     }
   };
 
