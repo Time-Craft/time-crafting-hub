@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from '@supabase/auth-helpers-react';
@@ -9,7 +10,7 @@ export const useNotifications = () => {
   useEffect(() => {
     if (!session?.user?.id) return;
 
-    // Listen for changes in time_transactions table
+    // Listen for changes in time_transactions table where user is either creator or recipient
     const transactionsChannel = supabase
       .channel('db-time-transactions')
       .on(
@@ -18,7 +19,7 @@ export const useNotifications = () => {
           event: '*',
           schema: 'public',
           table: 'time_transactions',
-          filter: `user_id=eq.${session.user.id}`
+          filter: `or(user_id.eq.${session.user.id},recipient_id.eq.${session.user.id})`
         },
         (payload) => {
           console.log('Received transaction update:', payload);
@@ -31,11 +32,13 @@ export const useNotifications = () => {
             if (newData.status !== oldData.status) {
               switch (newData.status) {
                 case 'in_progress':
-                  toast({
-                    title: "New Offer Request",
-                    description: `Someone wants to accept your ${newData.service_type} offer for ${newData.amount} hours`,
-                    variant: "default",
-                  });
+                  if (newData.user_id === session.user.id) {
+                    toast({
+                      title: "New Offer Request",
+                      description: `Someone wants to accept your ${newData.service_type} offer for ${newData.amount} hours`,
+                      variant: "default",
+                    });
+                  }
                   break;
                 case 'accepted':
                   toast({
@@ -80,7 +83,7 @@ export const useNotifications = () => {
             toast({
               title: "Balance Updated",
               description: `Your time balance has ${difference > 0 ? 'increased' : 'decreased'} by ${Math.abs(difference)} hours`,
-              variant: "default", // Changed from "secondary" to "default" to match allowed variants
+              variant: "default",
             });
           }
         }

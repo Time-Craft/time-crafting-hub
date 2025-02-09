@@ -41,6 +41,10 @@ export const useExploreOffers = () => {
           profiles!fk_user_profile (
             username,
             avatar_url
+          ),
+          recipient:profiles!fk_recipient_profile (
+            username,
+            avatar_url
           )
         `)
         .eq('type', 'earned')
