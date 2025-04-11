@@ -1,74 +1,42 @@
-import { Trophy, Target, Award } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { Button } from "@/components/ui/button";
-import BottomNav from "@/components/BottomNav";
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Trophy, Award } from "lucide-react"
 
 const Challenges = () => {
-  const challenges = [
-    {
-      id: 1,
-      title: "Community Helper",
-      description: "Complete 5 services this week",
-      progress: 60,
-      icon: Award,
-      reward: "3 bonus hours",
-    },
-    {
-      id: 2,
-      title: "Diverse Skills",
-      description: "Try 3 different service categories",
-      progress: 33,
-      icon: Target,
-      reward: "2 bonus hours",
-    },
-  ];
-
   return (
-    <div className="min-h-screen pb-20 p-4 bg-secondary/30">
-      <div className="max-w-lg mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Trophy className="text-primary" />
-            Challenges
-          </h1>
-          <div className="text-sm text-gray-600">
-            Your Points: 120
-          </div>
-        </div>
-
-        {challenges.map((challenge) => (
-          <Card key={challenge.id} className="animate-fadeIn">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <challenge.icon className="text-primary" />
-                  {challenge.title}
-                </div>
-                <span className="text-sm text-primary-dark font-normal">
-                  {challenge.reward}
-                </span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-gray-600">{challenge.description}</p>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Progress</span>
-                  <span>{challenge.progress}%</span>
-                </div>
-                <Progress value={challenge.progress} className="h-2" />
-              </div>
-              <Button variant="secondary" className="w-full">
-                View Details
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="container mx-auto p-6">
+      <h1 className="text-4xl font-bold mb-8">Challenges</h1>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xl font-medium">First Exchange</CardTitle>
+            <Trophy className="h-5 w-5 text-yellow-500" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Complete your first time exchange</p>
+            <div className="mt-4">
+              <Button variant="outline" className="w-full">Start</Button>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xl font-medium">Helpful Member</CardTitle>
+            <Award className="h-5 w-5 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Help 5 different community members</p>
+            <div className="mt-4">
+              <Button variant="outline" className="w-full">0/5 Completed</Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-      <BottomNav />
     </div>
-  );
-};
+  )
+}
 
-export default Challenges;
+export default Challenges

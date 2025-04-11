@@ -1,94 +1,38 @@
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import type { TimeTransaction } from "@/types/explore";
-import { useQueryClient } from "@tanstack/react-query";
 
-export const useOfferManagement = (currentUserId: string | undefined) => {
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+import { useCreateOffer } from './useCreateOffer'
+import { useUpdateOffer } from './useUpdateOffer'
+import { useDeleteOffer } from './useDeleteOffer'
+import { useOfferSubscription } from './useOfferSubscription'
+import { useCompleteOffer } from './useCompleteOffer'
 
-  const handleDelete = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .delete()
-        .eq('id', offerId)
-        .eq('user_id', currentUserId)
-        .eq('status', 'open');
+export interface OfferInput {
+  title: string
+  description: string
+  hours: number
+  serviceType: string
+  date?: string
+  duration: number
+  timeCredits: number 
+}
 
-      if (error) throw error;
+export const useOfferManagement = () => {
+  // Set up subscriptions for real-time updates
+  useOfferSubscription()
 
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-
-      toast({
-        title: "Success",
-        description: "Offer deleted successfully",
-      });
-    } catch (error) {
-      console.error('Error deleting offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete offer. Please try again.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleConfirmOffer = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ status: 'accepted' })
-        .eq('id', offerId)
-        .eq('user_id', currentUserId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Offer confirmed successfully",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-    } catch (error) {
-      console.error('Error confirming offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to confirm offer",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleRejectOffer = async (offerId: string) => {
-    try {
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ status: 'declined' })
-        .eq('id', offerId)
-        .eq('user_id', currentUserId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Offer rejected successfully",
-      });
-
-      queryClient.invalidateQueries({ queryKey: ['offers'] });
-    } catch (error) {
-      console.error('Error rejecting offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to reject offer",
-        variant: "destructive",
-      });
-    }
-  };
+  // Get all the individual hooks
+  const { createOffer, isCreating } = useCreateOffer()
+  const { updateOffer, isUpdating } = useUpdateOffer()
+  const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
 
   return {
-    handleDelete,
-    handleConfirmOffer,
-    handleRejectOffer,
-  };
-};
+    createOffer,
+    updateOffer,
+    deleteOffer,
+    completeOffer,
+    isCreating,
+    isUpdating,
+    isDeleting,
+    isCompleting
+  }
+}

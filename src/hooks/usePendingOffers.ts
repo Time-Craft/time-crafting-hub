@@ -1,166 +1,127 @@
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useSession } from "@supabase/auth-helpers-react";
-import { useToast } from "@/hooks/use-toast";
-import { useEffect } from "react";
-import type { TimeTransaction } from "@/types/explore";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
+
+interface PendingOffer {
+  id: string
+  title: string
+  description: string
+  hours: number
+  timeCredits?: number
+  user: {
+    id: string
+    name: string
+    avatar: string
+  }
+  status: string
+  isApplied?: boolean
+  applicationStatus?: string
+}
 
 export const usePendingOffers = () => {
-  const session = useSession();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
-  const { data: pendingOffers, isLoading } = useQuery({
-    queryKey: ['pending-offers'],
+  const { data, isLoading } = useQuery({
+    queryKey: ['pending-offers-and-applications'],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
 
-      const { data, error } = await supabase
-        .from('time_transactions')
+      // Get pending and booked offers (we now include booked as well)
+      const { data: pendingOffersData, error: pendingError } = await supabase
+        .from('offers')
         .select(`
           *,
-          profiles!fk_user_profile (
-            username,
-            avatar_url
-          ),
-          recipient:profiles!fk_recipient_profile (
+          profiles!offers_profile_id_fkey (
+            id,
             username,
             avatar_url
           )
         `)
-        .eq('user_id', session.user.id)
-        .eq('status', 'in_progress')
-        .eq('type', 'earned');
+        .in('status', ['pending', 'booked'])
+        .eq('profile_id', user.id)
+      
+      if (pendingError) throw pendingError
 
-      if (error) throw error;
-      return data as TimeTransaction[];
-    },
-    enabled: !!session?.user?.id,
-    staleTime: 1000 * 30,
-    gcTime: 1000 * 60 * 5,
-  });
+      // Get offers the user has applied to
+      const { data: applicationsData, error: applicationsError } = await supabase
+        .from('offer_applications')
+        .select(`
+          *,
+          offers (
+            *,
+            profiles!offers_profile_id_fkey (
+              id,
+              username,
+              avatar_url
+            )
+          )
+        `)
+        .eq('applicant_id', user.id)
+      
+      if (applicationsError) throw applicationsError
 
-  useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const channel = supabase
-      .channel('public:time_transactions')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'time_transactions',
-          filter: `user_id=eq.${session.user.id}`
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
+      // Transform pending offers
+      const pendingOffers = pendingOffersData.map(offer => ({
+        id: offer.id,
+        title: offer.title,
+        description: offer.description,
+        hours: offer.hours,
+        timeCredits: offer.time_credits,
+        status: offer.status,
+        isApplied: false,
+        user: {
+          id: offer.profiles?.id || '',
+          name: offer.profiles?.username || 'Unknown User',
+          avatar: offer.profiles?.avatar_url || '/placeholder.svg'
         }
-      )
-      .subscribe();
+      }));
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session?.user?.id, queryClient]);
-
-  const handleConfirmOffer = async (offer: TimeTransaction) => {
-    try {
-      // Update the earned transaction
-      const { error } = await supabase
-        .from('time_transactions')
-        .update({ 
-          status: 'accepted',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', offer.id)
-        .eq('user_id', session?.user?.id);
-
-      if (error) throw error;
-
-      // Update the corresponding spent transaction
-      const { error: recipientError } = await supabase
-        .from('time_transactions')
-        .update({ 
-          status: 'accepted',
-          completed_at: new Date().toISOString()
-        })
-        .eq('user_id', offer.recipient_id)
-        .eq('recipient_id', session?.user?.id)
-        .eq('service_type', offer.service_type)
-        .eq('status', 'in_progress');
-
-      if (recipientError) throw recipientError;
-
-      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
-      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
-
-      toast({
-        title: "Success",
-        description: "Service completed and confirmed successfully",
+      // Transform applied offers
+      const appliedOffers = applicationsData.map(application => {
+        const offer = application.offers;
+        return {
+          id: offer.id,
+          title: offer.title,
+          description: offer.description,
+          hours: offer.hours,
+          timeCredits: offer.time_credits,
+          status: offer.status,
+          isApplied: true,
+          applicationStatus: application.status,
+          user: {
+            id: offer.profiles?.id || '',
+            name: offer.profiles?.username || 'Unknown User',
+            avatar: offer.profiles?.avatar_url || '/placeholder.svg'
+          }
+        };
       });
-    } catch (error) {
-      console.error('Error confirming offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to confirm offer",
-        variant: "destructive",
-      });
+
+      // Combine both types of offers
+      return [...pendingOffers, ...appliedOffers] as PendingOffer[]
     }
-  };
+  })
 
-  const handleDeclineOffer = async (offer: TimeTransaction) => {
-    try {
-      // Update the earned transaction
+  const completeOffer = useMutation({
+    mutationFn: async (offerId: string) => {
       const { error } = await supabase
-        .from('time_transactions')
-        .update({ 
-          status: 'declined',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', offer.id)
-        .eq('user_id', session?.user?.id);
-
-      if (error) throw error;
-
-      // Update the corresponding spent transaction
-      const { error: recipientError } = await supabase
-        .from('time_transactions')
-        .update({ 
-          status: 'declined',
-          completed_at: new Date().toISOString()
-        })
-        .eq('user_id', offer.recipient_id)
-        .eq('recipient_id', session?.user?.id)
-        .eq('service_type', offer.service_type)
-        .eq('status', 'in_progress');
-
-      if (recipientError) throw recipientError;
-
-      queryClient.invalidateQueries({ queryKey: ['pending-offers'] });
-      queryClient.invalidateQueries({ queryKey: ['time-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['transaction-stats'] });
-
-      toast({
-        title: "Success",
-        description: "Offer declined successfully",
-      });
-    } catch (error) {
-      console.error('Error declining offer:', error);
-      toast({
-        title: "Error",
-        description: "Failed to decline offer",
-        variant: "destructive",
-      });
+        .from('offers')
+        .update({ status: 'completed' })
+        .eq('id', offerId)
+      
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+      queryClient.invalidateQueries({ queryKey: ['time-balance'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
     }
-  };
+  })
 
   return {
-    pendingOffers,
+    pendingOffers: data,
     isLoading,
-    handleConfirmOffer,
-    handleDeclineOffer,
-  };
-};
+    completeOffer: completeOffer.mutate
+  }
+}

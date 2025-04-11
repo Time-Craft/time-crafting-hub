@@ -1,43 +1,123 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PendingOfferCard } from "./pending-offers/PendingOfferCard";
-import { usePendingOffers } from "@/hooks/usePendingOffers";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { usePendingOffers } from "@/hooks/usePendingOffers"
+import OfferCard from "../explore/OfferCard"
+import { useEffect } from "react"
+import { supabase } from "@/integrations/supabase/client"
+import { useQueryClient } from "@tanstack/react-query"
 
-export const PendingOffers = () => {
-  const {
-    pendingOffers,
-    isLoading,
-    handleConfirmOffer,
-    handleDeclineOffer,
-  } = usePendingOffers();
+const PendingOffers = () => {
+  const { pendingOffers, isLoading } = usePendingOffers()
+  const queryClient = useQueryClient()
+
+  // Set up real-time subscription for offer and application changes
+  useEffect(() => {
+    const offerChannel = supabase
+      .channel('pending-offers-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offers'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+        }
+      )
+      .subscribe()
+
+    const applicationChannel = supabase
+      .channel('applications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'offer_applications'
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['pending-offers-and-applications'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(offerChannel)
+      supabase.removeChannel(applicationChannel)
+    }
+  }, [queryClient])
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>My Offers & Applications</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div>Loading...</div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (!pendingOffers || pendingOffers.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>My Offers & Applications</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-center text-muted-foreground">
+            No pending offers or applications found
+          </p>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Group offers by type (my offers vs applied offers)
+  const myOffers = pendingOffers.filter(offer => !offer.isApplied)
+  const appliedOffers = pendingOffers.filter(offer => offer.isApplied)
 
   return (
-    <section className="p-6">
-      <div className="max-w-lg mx-auto">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Pending Confirmations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {isLoading ? (
-                <p className="text-gray-500 text-center">Loading offers...</p>
-              ) : !pendingOffers?.length ? (
-                <p className="text-gray-500 text-center">No pending offers to confirm</p>
-              ) : (
-                pendingOffers?.map((offer) => (
-                  <PendingOfferCard
+    <Card className="gradient-border card-hover">
+      <CardHeader>
+        <CardTitle className="text-navy">My Offers & Applications</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+          {myOffers.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">My Pending Offers</h3>
+              <div className="space-y-4">
+                {myOffers.map((offer) => (
+                  <OfferCard 
+                    key={offer.id} 
+                    offer={offer}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {appliedOffers.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3">My Applications</h3>
+              <div className="space-y-4">
+                {appliedOffers.map((offer) => (
+                  <OfferCard 
                     key={offer.id}
                     offer={offer}
-                    onConfirm={handleConfirmOffer}
-                    onDecline={handleDeclineOffer}
                   />
-                ))
-              )}
+                ))}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </section>
-  );
-};
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+export default PendingOffers

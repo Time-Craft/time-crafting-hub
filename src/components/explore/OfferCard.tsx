@@ -1,57 +1,159 @@
-import { Card } from "@/components/ui/card";
-import type { TimeTransaction } from "@/types/explore";
-import { OfferHeader } from "./offer/OfferHeader";
-import { OfferActions } from "./offer/OfferActions";
-import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card"
+import OfferHeader from "./OfferHeader"
+import OfferStatus from "./OfferStatus"
+import { useApplicationManagement } from "@/hooks/useApplicationManagement"
+import { useQuery } from "@tanstack/react-query"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/components/ui/use-toast"
+import { useDeleteOffer } from "@/hooks/useDeleteOffer"
+import { useCompleteOffer } from "@/hooks/useCompleteOffer"
+import OfferApplyButton from "./OfferApplyButton"
+import OfferOwnerActions from "./OfferOwnerActions"
+import ApplicationsList from "./ApplicationsList"
 
 interface OfferCardProps {
-  offer: TimeTransaction;
-  currentUserId: string | undefined;
-  onAccept: (offer: TimeTransaction) => Promise<void>;
+  offer: {
+    id: string
+    title: string
+    description: string
+    hours?: number
+    timeCredits?: number
+    user: {
+      id: string
+      name: string
+      avatar: string
+    }
+    status: string
+    service_type?: string
+    accepted_by?: string[]
+    isApplied?: boolean
+    applicationStatus?: string
+  }
+  showApplications?: boolean
 }
 
-export const OfferCard = ({
-  offer,
-  currentUserId,
-  onAccept,
-}: OfferCardProps) => {
-  const handleAccept = async (offer: TimeTransaction) => {
-    await onAccept(offer);
-  };
+const OfferCard = ({ offer, showApplications = false }: OfferCardProps) => {
+  const { toast } = useToast()
+  const { deleteOffer, isDeleting } = useDeleteOffer()
+  const { completeOffer, isCompleting } = useCompleteOffer()
+  const { 
+    applyToOffer, 
+    applications, 
+    updateApplicationStatus,
+    userApplication,
+    isApplying,
+    isUpdating
+  } = useApplicationManagement(offer.id)
+
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: async () => {
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error) throw error
+      return user
+    }
+  })
+
+  const isOwner = currentUser?.id === offer.user.id
+
+  const handleDelete = async () => {
+    try {
+      await deleteOffer(offer.id)
+      toast({
+        title: "Success",
+        description: "Offer deleted successfully",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete offer: " + error.message,
+      })
+    }
+  }
+
+  const handleComplete = async () => {
+    try {
+      await completeOffer(offer.id)
+      toast({
+        title: "Success",
+        description: "Offer marked as completed and credits transferred",
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to complete offer: ${error.message}`,
+      })
+    }
+  }
+
+  const handleUpdateStatus = async (applicationId: string, status: 'accepted' | 'rejected') => {
+    try {
+      await updateApplicationStatus({ 
+        applicationId, 
+        status 
+      })
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to ${status} application: ${error.message}`,
+      })
+    }
+  }
+
+  // Check if this offer has any accepted applications
+  const hasAcceptedApplication = applications?.some(app => app.status === 'accepted')
 
   return (
-    <Card className="p-6 animate-fadeIn hover:shadow-md transition-all bg-white border-gray-100">
-      <div className="flex flex-col gap-4">
-        <OfferHeader
-          offer={offer}
-          currentUserId={currentUserId}
+    <Card className="gradient-border card-hover">
+      <CardContent className="p-6">
+        <OfferHeader 
+          user={offer.user} 
+          title={offer.title} 
+          hours={offer.hours}
+          timeCredits={offer.timeCredits} 
         />
-        
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <Clock size={16} className="text-primary" />
-            <span>{offer.amount} hours</span>
-            <Badge variant="outline" className="ml-auto">
-              {offer.status}
-            </Badge>
+        <p className="mt-2 text-navy/80">{offer.description}</p>
+        <div className="mt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <OfferStatus status={offer.status || 'unknown'} />
+          <div className="flex flex-col md:flex-row gap-2 md:items-center">
+            {isOwner ? (
+              <OfferOwnerActions 
+                offerId={offer.id}
+                status={offer.status}
+                hasAcceptedApplication={hasAcceptedApplication}
+                onDelete={handleDelete}
+                onComplete={handleComplete}
+                isDeleting={isDeleting}
+                isCompleting={isCompleting}
+              />
+            ) : (
+              <OfferApplyButton
+                offerId={offer.id}
+                status={offer.status}
+                isApplied={offer.isApplied}
+                applicationStatus={offer.applicationStatus}
+                userApplication={userApplication}
+                onApply={applyToOffer}
+                isApplying={isApplying}
+              />
+            )}
           </div>
-          
-          <p className="text-sm text-gray-600 leading-relaxed">
-            {offer.description}
-          </p>
-          
-          <Badge variant="secondary" className="w-fit bg-primary-light text-primary hover:bg-primary-light">
-            {offer.service_type}
-          </Badge>
         </div>
-        
-        <OfferActions
-          offer={offer}
-          currentUserId={currentUserId}
-          onAccept={handleAccept}
-        />
-      </div>
+
+        {showApplications && (
+          <ApplicationsList 
+            applications={applications || []}
+            onUpdateStatus={handleUpdateStatus}
+            isUpdating={isUpdating}
+          />
+        )}
+      </CardContent>
     </Card>
-  );
-};
+  )
+}
+
+export default OfferCard

@@ -1,51 +1,42 @@
-import { MapPin, Filter } from "lucide-react";
-import { Toggle } from "@/components/ui/toggle";
-import { SearchBar } from "./SearchBar";
+
+import { Button } from "@/components/ui/button"
+import { Map, List } from "lucide-react"
+import SearchBar from "./SearchBar"
 
 interface ExploreHeaderProps {
-  view: "map" | "list";
-  setView: (view: "map" | "list") => void;
-  range: number;
-  searchQuery: string;
-  setSearchQuery: (query: string) => void;
-  setIsSearchFocused: (focused: boolean) => void;
+  view: 'list' | 'map'
+  onViewChange: (view: 'list' | 'map') => void
 }
 
-export const ExploreHeader = ({
-  view,
-  setView,
-  searchQuery,
-  setSearchQuery,
-  setIsSearchFocused,
-}: ExploreHeaderProps) => {
+const ExploreHeader = ({ view, onViewChange }: ExploreHeaderProps) => {
   return (
-    <div className="bg-white border-b">
-      <div className="px-4 py-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-gray-900">Explore</h1>
-          <Toggle 
-            aria-label="Toggle view" 
-            onClick={() => setView(view === "map" ? "list" : "map")}
-            className="bg-primary-light text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
-          >
-            {view === "map" ? (
-              <span className="flex items-center gap-2">
-                <Filter className="w-4 h-4" /> List View
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" /> Map View
-              </span>
-            )}
-          </Toggle>
+    <div className="flex flex-col space-y-4 mb-6">
+      <h1 className="text-2xl md:text-3xl font-bold text-navy">Explore Time Offers</h1>
+      <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
+        <div className="flex-1">
+          <SearchBar />
         </div>
-        
-        <SearchBar
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          setIsSearchFocused={setIsSearchFocused}
-        />
+        <div className="flex space-x-2 self-end">
+          <Button
+            variant={view === 'list' ? 'default' : 'outline'}
+            size="icon"
+            onClick={() => onViewChange('list')}
+            className="bg-teal text-cream hover:bg-teal/90"
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={view === 'map' ? 'default' : 'outline'}
+            size="icon"
+            onClick={() => onViewChange('map')}
+            className="bg-teal text-cream hover:bg-teal/90"
+          >
+            <Map className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
-  );
-};
+  )
+}
+
+export default ExploreHeader
